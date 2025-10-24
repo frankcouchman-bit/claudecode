@@ -217,13 +217,20 @@ export default function Page(){
             <Zap className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todayGens}</div>
+            <div className="text-2xl font-bold">
+              {todayGens}
+              {!isPro && <span className="text-sm text-muted-foreground ml-2">/ 1 daily</span>}
+              {isPro && <span className="text-sm text-muted-foreground ml-2">/ 15 daily</span>}
+            </div>
             <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mt-2">
               <div
                 className="bg-gradient-to-r from-purple-600 to-blue-600 h-1.5 rounded-full transition-all"
-                style={{ width: `${isPro ? 100 : Math.min((todayGens / 5) * 100, 100)}%` }}
+                style={{ width: `${isPro ? Math.min((todayGens / 15) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
               />
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {isPro ? `${15 - todayGens} articles left today` : `Resets daily • 7 per month limit`}
+            </p>
           </CardContent>
         </Card>
 

@@ -9,7 +9,7 @@ import { ClientQuotaDisplay } from "@/components/client-quota-display"
 export const metadata: Metadata = {
   title: "SEOScribe — Article Writer & AI Writing Tool",
   description: "Long-form SEO articles with citations, images, and on-page SEO.",
-  metadataBase: new URL("https://seoscribe.pro")
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://seoscribe.com")
 }
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
