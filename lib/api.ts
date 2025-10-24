@@ -17,3 +17,11 @@ export async function getProfile(){ const res = await fetch(`${API_BASE}/api/pro
 export async function listArticles(){ const res = await fetch(`${API_BASE}/api/articles`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
 export async function createCheckout(successUrl?:string, cancelUrl?:string){ const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, withAuthHeaders({ method:"POST", body: JSON.stringify({ successUrl, cancelUrl }) })); return handle(res) }
 export async function openPortal(returnUrl?:string){ const res = await fetch(`${API_BASE}/api/stripe/portal`, withAuthHeaders({ method:"POST", body: JSON.stringify({ returnUrl }) })); return handle(res) }
+
+// Tool API endpoints
+export async function generateHeadlines(payload: { topic: string }){ const res = await fetch(`${API_BASE}/api/tools/headlines`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function optimizeMetaTags(payload: { title: string }){ const res = await fetch(`${API_BASE}/api/tools/meta-tags`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function suggestInternalLinks(payload: { content: string }){ const res = await fetch(`${API_BASE}/api/tools/internal-links`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function analyzeReadability(payload: { content: string }){ const res = await fetch(`${API_BASE}/api/tools/readability`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function generateContentBrief(payload: { topic: string }){ const res = await fetch(`${API_BASE}/api/tools/content-brief`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function checkKeywordDensity(payload: { content: string }){ const res = await fetch(`${API_BASE}/api/tools/keyword-density`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }

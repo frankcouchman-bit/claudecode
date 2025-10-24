@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,10 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { generateDraft } from "@/lib/api"
 import { ArticlePreview } from "@/components/article-preview"
-import { isAuthed } from "@/lib/auth"
+import { useQuota } from "@/contexts/quota-context"
 import {
-  getQuota,
-  saveQuota,
   canGenerateArticle,
   recordArticleGeneration,
   getRemainingQuota
@@ -20,8 +18,7 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Globe,
-  Lock
+  Globe
 } from "lucide-react"
 import {
   Select,
@@ -34,25 +31,13 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function Demo() {
+  const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
   const [topic, setTopic] = useState("")
   const [language, setLanguage] = useState("en")
   const [tone, setTone] = useState("professional")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [quotaInfo, setQuotaInfo] = useState("")
-
-  useEffect(() => {
-    const authed = isAuthed()
-    setIsAuthenticated(authed)
-    updateQuotaDisplay()
-  }, [])
-
-  function updateQuotaDisplay() {
-    const quota = getQuota()
-    setQuotaInfo(getRemainingQuota(quota))
-  }
 
   async function run() {
     if (!topic.trim()) {
@@ -61,7 +46,6 @@ export default function Demo() {
     }
 
     // Check quota enforcement
-    const quota = getQuota()
     const { allowed, reason } = canGenerateArticle(quota, isAuthenticated)
 
     if (!allowed) {
@@ -83,10 +67,14 @@ export default function Demo() {
         generate_faqs: true
       })
 
-      // Record successful generation
+      // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
-      saveQuota(updatedQuota)
-      updateQuotaDisplay()
+      updateQuota(updatedQuota)
+
+      // Sync with backend if authenticated
+      if (isAuthenticated) {
+        setTimeout(() => syncWithBackend(), 1000)
+      }
 
       setResult(r)
     } catch (e: any) {
@@ -95,6 +83,8 @@ export default function Demo() {
       setLoading(false)
     }
   }
+
+  const quotaInfo = getRemainingQuota(quota)
 
   return (
     <div className="space-y-6">
