@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, X } from "lucide-react"
-import { fadeInUp } from "@/lib/animations"
 
 export default function ArticleEditPage() {
   const router = useRouter()
@@ -122,7 +121,12 @@ export default function ArticleEditPage() {
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <motion.div {...fadeInUp} className="mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          className="mb-8"
+        >
           <Button
             variant="ghost"
             onClick={() => router.push(`/library/${id}`)}
@@ -147,8 +151,9 @@ export default function ArticleEditPage() {
 
         {/* Edit Form */}
         <motion.div
-          {...fadeInUp}
-          transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
           className="space-y-6"
         >
           {/* Title */}
@@ -255,8 +260,9 @@ export default function ArticleEditPage() {
 
           {/* Action Buttons */}
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.2 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
             className="flex items-center gap-4 pt-4"
           >
             <Button

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { floatingAnimation, gradientShift } from "@/lib/premium-effects"
+import { floatingAnimation } from "@/lib/premium-effects"
 
 /**
  * Premium Animated Background Component
@@ -104,9 +104,14 @@ export function GradientMesh() {
         `,
         backgroundSize: "200% 200%",
       }}
-      variants={gradientShift}
-      initial="initial"
-      animate="animate"
+      animate={{
+        backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+      }}
+      transition={{
+        duration: 8,
+        repeat: Infinity,
+        ease: "linear"
+      }}
     />
   )
 }

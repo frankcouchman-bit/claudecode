@@ -20,7 +20,6 @@ import {
   MessageSquare,
   Target
 } from "lucide-react"
-import { fadeInUp } from "@/lib/animations"
 
 export default function ArticleViewPage() {
   const router = useRouter()
@@ -100,7 +99,7 @@ export default function ArticleViewPage() {
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <motion.div {...fadeInUp} className="mb-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }} className="mb-8">
           <Button
             variant="ghost"
             onClick={() => router.push("/library")}
@@ -144,9 +143,10 @@ export default function ArticleViewPage() {
                 Edit
               </Button>
               <Button
-                variant="destructive"
+                variant="outline"
                 onClick={handleDelete}
                 disabled={deleting}
+                className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 {deleting ? "Deleting..." : "Delete"}
@@ -158,8 +158,7 @@ export default function ArticleViewPage() {
         {/* Featured Image */}
         {article.image_url && (
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.1 }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
             className="mb-8"
           >
             <img
@@ -172,8 +171,7 @@ export default function ArticleViewPage() {
 
         {/* Meta Information */}
         <motion.div
-          {...fadeInUp}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           className="grid md:grid-cols-3 gap-4 mb-8"
         >
           <Card className="border-2 border-purple-100 hover:border-purple-300 transition-colors">
@@ -217,8 +215,7 @@ export default function ArticleViewPage() {
         {/* Meta Tags */}
         {(article.meta_title || article.meta_description) && (
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.3 }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
             <Card className="mb-8 border-2 border-purple-100">
               <CardHeader>
@@ -257,8 +254,7 @@ export default function ArticleViewPage() {
 
         {/* Article Content */}
         <motion.div
-          {...fadeInUp}
-          transition={{ delay: 0.4 }}
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         >
           <Card className="mb-8 border-2 border-gray-100">
             <CardHeader>
@@ -288,8 +284,7 @@ export default function ArticleViewPage() {
         {/* Internal Links */}
         {article.internal_links && article.internal_links.length > 0 && (
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.5 }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
             <Card className="mb-8 border-2 border-green-100">
               <CardHeader>
@@ -324,8 +319,7 @@ export default function ArticleViewPage() {
         {/* Citations */}
         {article.citations && article.citations.length > 0 && (
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.6 }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
             <Card className="mb-8 border-2 border-blue-100">
               <CardHeader>
@@ -361,8 +355,7 @@ export default function ArticleViewPage() {
         {/* FAQs */}
         {article.faqs && article.faqs.length > 0 && (
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.7 }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
             <Card className="mb-8 border-2 border-yellow-100">
               <CardHeader>
@@ -395,8 +388,7 @@ export default function ArticleViewPage() {
         {/* Social Posts */}
         {article.social_posts && article.social_posts.length > 0 && (
           <motion.div
-            {...fadeInUp}
-            transition={{ delay: 0.8 }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
             <Card className="mb-8 border-2 border-pink-100">
               <CardHeader>
