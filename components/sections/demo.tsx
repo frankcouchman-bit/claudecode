@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,11 +8,20 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { generateDraft } from "@/lib/api"
 import { ArticlePreview } from "@/components/article-preview"
+import { isAuthed } from "@/lib/auth"
+import {
+  getQuota,
+  saveQuota,
+  canGenerateArticle,
+  recordArticleGeneration,
+  getRemainingQuota
+} from "@/lib/quota-enforcement"
 import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Globe
+  Globe,
+  Lock
 } from "lucide-react"
 import {
   Select,
@@ -21,6 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import Link from "next/link"
+import { motion, AnimatePresence } from "framer-motion"
 
 export default function Demo() {
   const [topic, setTopic] = useState("")
@@ -29,12 +40,35 @@ export default function Demo() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [quotaInfo, setQuotaInfo] = useState("")
+
+  useEffect(() => {
+    const authed = isAuthed()
+    setIsAuthenticated(authed)
+    updateQuotaDisplay()
+  }, [])
+
+  function updateQuotaDisplay() {
+    const quota = getQuota()
+    setQuotaInfo(getRemainingQuota(quota))
+  }
 
   async function run() {
     if (!topic.trim()) {
       setError("Please enter a topic")
       return
     }
+
+    // Check quota enforcement
+    const quota = getQuota()
+    const { allowed, reason } = canGenerateArticle(quota, isAuthenticated)
+
+    if (!allowed) {
+      setError(reason || "Generation limit reached")
+      return
+    }
+
     setError(null)
     setLoading(true)
     try {
@@ -48,6 +82,12 @@ export default function Demo() {
         generate_image: true,
         generate_faqs: true
       })
+
+      // Record successful generation
+      const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
+      saveQuota(updatedQuota)
+      updateQuotaDisplay()
+
       setResult(r)
     } catch (e: any) {
       setError(e?.message || "Failed to generate")
@@ -143,30 +183,56 @@ export default function Demo() {
             </div>
           </div>
 
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200">
-              <AlertCircle className="h-5 w-5 shrink-0" />
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+              >
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <p className="text-sm flex-1">{error}</p>
+                {!isAuthenticated && error.includes("locked") && (
+                  <Link href="/auth">
+                    <Button size="sm" className="gradient-btn text-white">
+                      Sign Up
+                    </Button>
+                  </Link>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>25+ languages</span>
+          <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
+            <div className="flex flex-wrap gap-4 text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>25+ languages</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>AI-generated image</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>Auto citations & FAQs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>Social posts included</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>AI-generated image</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>Auto citations & FAQs</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>Social posts included</span>
-            </div>
+            {quotaInfo && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Badge variant="outline" className="text-xs">
+                  {quotaInfo}
+                </Badge>
+              </motion.div>
+            )}
           </div>
         </CardContent>
       </Card>

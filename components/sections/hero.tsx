@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Sparkles, ArrowRight, CheckCircle2 } from "lucide-react"
+import { Sparkles, ArrowRight, CheckCircle2, TrendingUp, Users, Zap } from "lucide-react"
+import { ParticleBackground, GradientOrbs, GridPattern } from "@/components/particle-background"
+import { AnimatedCounter } from "@/components/animated-counter"
 
 export function Hero() {
   return (
@@ -12,9 +14,10 @@ export function Hero() {
       {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-50/30 to-transparent dark:via-purple-950/20" />
 
-      {/* Floating orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
+      {/* Premium background effects */}
+      <GridPattern />
+      <ParticleBackground />
+      <GradientOrbs />
 
       <div className="container relative py-32 lg:py-40">
         <div className="max-w-4xl mx-auto text-center">
@@ -62,15 +65,19 @@ export function Hero() {
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
           >
             <Link href="/article-writer">
-              <Button size="lg" className="gradient-btn text-white px-8 h-12 text-lg group">
-                Generate a Demo Article
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                <Button size="lg" className="gradient-btn text-white px-8 h-12 text-lg group shadow-lg hover:shadow-xl transition-shadow">
+                  Generate a Demo Article
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </motion.div>
             </Link>
             <Link href="/pricing">
-              <Button variant="outline" size="lg" className="px-8 h-12 text-lg border-2 hover:border-primary">
-                See Pricing
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                <Button variant="outline" size="lg" className="px-8 h-12 text-lg border-2 hover:border-primary hover:bg-primary/5 transition-all">
+                  See Pricing
+                </Button>
+              </motion.div>
             </Link>
           </motion.div>
 
@@ -81,39 +88,77 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground"
           >
-            <div className="flex items-center gap-2">
+            <motion.div
+              className="flex items-center gap-2"
+              whileHover={{ scale: 1.05 }}
+            >
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <span>No credit card required</span>
-            </div>
-            <div className="flex items-center gap-2">
+            </motion.div>
+            <motion.div
+              className="flex items-center gap-2"
+              whileHover={{ scale: 1.05 }}
+            >
               <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <span>10,000+ words/month free</span>
-            </div>
-            <div className="flex items-center gap-2">
+              <span>1 article per week free</span>
+            </motion.div>
+            <motion.div
+              className="flex items-center gap-2"
+              whileHover={{ scale: 1.05 }}
+            >
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <span>Cancel anytime</span>
-            </div>
+            </motion.div>
           </motion.div>
 
-          {/* Stats */}
+          {/* Animated Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
+            className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto"
           >
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold gradient-text">50K+</div>
-              <div className="text-sm text-muted-foreground mt-1">Articles Generated</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold gradient-text">4.9/5</div>
-              <div className="text-sm text-muted-foreground mt-1">User Rating</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold gradient-text">2M+</div>
-              <div className="text-sm text-muted-foreground mt-1">Words Written</div>
-            </div>
+            <motion.div
+              className="text-center p-6 rounded-2xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border border-purple-200/50 dark:border-purple-800/50"
+              whileHover={{ scale: 1.05, y: -4 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="inline-flex p-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 mb-3">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl md:text-4xl font-bold gradient-text">
+                <AnimatedCounter value={50000} suffix="+" />
+              </div>
+              <div className="text-sm text-muted-foreground mt-2">Articles Generated</div>
+            </motion.div>
+
+            <motion.div
+              className="text-center p-6 rounded-2xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border border-purple-200/50 dark:border-purple-800/50"
+              whileHover={{ scale: 1.05, y: -4 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="inline-flex p-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 mb-3">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl md:text-4xl font-bold gradient-text">
+                <AnimatedCounter value={4.9} suffix="/5" />
+              </div>
+              <div className="text-sm text-muted-foreground mt-2">User Rating</div>
+            </motion.div>
+
+            <motion.div
+              className="text-center p-6 rounded-2xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border border-purple-200/50 dark:border-purple-800/50"
+              whileHover={{ scale: 1.05, y: -4 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="inline-flex p-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 mb-3">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl md:text-4xl font-bold gradient-text">
+                <AnimatedCounter value={10000} suffix="+" />
+              </div>
+              <div className="text-sm text-muted-foreground mt-2">Active Users</div>
+            </motion.div>
           </motion.div>
         </div>
       </div>
