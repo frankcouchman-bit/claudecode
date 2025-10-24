@@ -1,10 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { saveArticle } from "@/lib/api"
+import { useQuota } from "@/contexts/quota-context"
+import { motion } from "framer-motion"
 import {
   Copy,
   Download,
@@ -18,16 +22,23 @@ import {
   Eye,
   Share2,
   Code,
-  Globe
+  Globe,
+  Save,
+  BookmarkPlus
 } from "lucide-react"
 
 interface ArticlePreviewProps {
   result: any
+  onSave?: () => void
 }
 
-export function ArticlePreview({ result }: ArticlePreviewProps) {
+export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
+  const router = useRouter()
+  const { isAuthenticated } = useQuota()
   const [copied, setCopied] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("preview")
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
@@ -43,6 +54,46 @@ export function ArticlePreview({ result }: ArticlePreviewProps) {
     a.download = filename
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function handleSave() {
+    if (!isAuthenticated) {
+      alert("Please sign in to save articles")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const response = await saveArticle({
+        title: result.title,
+        content: result.html || result.markdown,
+        markdown: result.markdown,
+        html: result.html,
+        meta_title: result.meta_title,
+        meta_description: result.meta_description,
+        meta_keywords: result.meta_keywords || result.keywords,
+        seo_score: result.seo_score,
+        readability_score: result.readability_score,
+        word_count: result.word_count,
+        image_url: result.image_url,
+        citations: result.citations,
+        faqs: result.faqs,
+        social_posts: result.social_posts,
+        keywords: result.keywords,
+        internal_links: result.internal_links
+      })
+
+      setSaved(true)
+      setTimeout(() => {
+        router.push('/library')
+      }, 1500)
+
+      if (onSave) onSave()
+    } catch (e: any) {
+      alert(e?.message || "Failed to save article")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -82,6 +133,33 @@ export function ArticlePreview({ result }: ArticlePreviewProps) {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
+              {isAuthenticated && (
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    className="gradient-btn text-white"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving || saved}
+                  >
+                    {saved ? (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Saved!
+                      </>
+                    ) : saving ? (
+                      <>
+                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save to Library
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+              )}
               <Button
                 variant="outline"
                 size="sm"

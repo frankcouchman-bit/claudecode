@@ -16,10 +16,17 @@ import {
   Crown,
   LogOut,
   CreditCard,
-  ArrowUpRight
+  ArrowUpRight,
+  Eye,
+  Edit,
+  Clock
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import { fadeInUp } from "@/lib/animations"
 
 export default function Page(){
+  const router = useRouter()
   const [authed,setAuthed]=useState(false)
   const [loading,setLoading]=useState(true)
   const [profile,setProfile]=useState<any>(null)
@@ -118,6 +125,17 @@ export default function Page(){
   const monthGens = profile?.usage?.month?.generations ?? 0
   const toolsToday = profile?.tools_today ?? 0
   const toolLimit = profile?.tool_limit_daily ?? 0
+
+  // Get recent articles (last 5)
+  const recentArticles = [...articles]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
+
+  function getSEOBadgeColor(score: number) {
+    if (score >= 80) return "bg-green-500 text-white"
+    if (score >= 60) return "bg-yellow-500 text-white"
+    return "bg-red-500 text-white"
+  }
 
   return (
     <div className="container py-10 space-y-8">
@@ -225,6 +243,77 @@ export default function Page(){
         </Card>
       </div>
 
+      {/* Recent Articles */}
+      {articles.length > 0 && (
+        <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold">Recent Articles</h2>
+              <p className="text-muted-foreground text-sm">Your latest content at a glance</p>
+            </div>
+            <Link href="/library">
+              <Button variant="outline">
+                View All
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {recentArticles.map((article: any) => (
+              <Card
+                key={article.id}
+                className="border-2 border-gray-100 hover:border-purple-300 hover:shadow-lg transition-all cursor-pointer group"
+                onClick={() => router.push(`/library/${article.id}`)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge className={getSEOBadgeColor(article.seo_score || 0)}>
+                      SEO: {article.seo_score || 0}
+                    </Badge>
+                    <Clock className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <CardTitle className="line-clamp-2 text-lg group-hover:text-purple-600 transition-colors">
+                    {article.title || "Untitled Article"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                    <span>{article.word_count?.toLocaleString() || 0} words</span>
+                    <span>{new Date(article.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/library/${article.id}`)
+                      }}
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 gradient-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/library/${article.id}/edit`)
+                      }}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Articles Table */}
       <Card>
         <CardHeader>
@@ -262,8 +351,14 @@ export default function Page(){
                 </thead>
                 <tbody>
                   {articles.map((article:any) => (
-                    <tr key={article.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium">{article.title}</td>
+                    <tr
+                      key={article.id}
+                      className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/library/${article.id}`)}
+                    >
+                      <td className="p-4 font-medium hover:text-purple-600 transition-colors">
+                        {article.title}
+                      </td>
                       <td className="p-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-3 w-3" />
@@ -273,7 +368,7 @@ export default function Page(){
                       <td className="p-4 text-sm">{article.word_count?.toLocaleString() ?? '-'}</td>
                       <td className="p-4">
                         {article.seo_score ? (
-                          <Badge variant={article.seo_score >= 80 ? "success" : article.seo_score >= 60 ? "warning" : "destructive"}>
+                          <Badge className={getSEOBadgeColor(article.seo_score)}>
                             {article.seo_score}/100
                           </Badge>
                         ) : (
@@ -282,7 +377,7 @@ export default function Page(){
                       </td>
                       <td className="p-4">
                         <Badge variant="outline" className="capitalize">
-                          {article.status}
+                          {article.status || 'draft'}
                         </Badge>
                       </td>
                     </tr>
