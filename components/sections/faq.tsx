@@ -34,7 +34,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: "What's the difference between Free and Pro plans?",
-    answer: "Free plan: 1 article/week + 1 tool/day. Pro plan ($19.99/month): 15 articles/day (450/month) + 10 tools/day + unlimited revisions + priority generation + saved article library + bulk export. Pro is designed for agencies, content teams, and serious marketers who need to scale content production. Both plans get the same AI quality, SERP research, and full SEO optimization."
+    answer: "Free plan: 1 article/week + 1 tool/day. Pro plan ($24/month): 15 articles/day (450/month) + 10 tools/day + unlimited revisions + priority generation + saved article library + bulk export. Pro is designed for agencies, content teams, and serious marketers who need to scale content production. Both plans get the same AI quality, SERP research, and full SEO optimization."
   },
   {
     question: "Can I edit the articles after they're generated?",

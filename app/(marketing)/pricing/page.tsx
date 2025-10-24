@@ -3,7 +3,7 @@ import { Pricing as PricingSection } from "@/components/sections/pricing"
 
 export const metadata: Metadata = {
   title: "Pricing Plans - Free & Pro AI SEO Content Writer | SEOScribe",
-  description: "Choose your plan: Free (1 article/week) or Pro ($19.99/month, 15 articles/day). No contracts, cancel anytime. Start with free plan—no credit card required.",
+  description: "Choose your plan: Free (1 article/week) or Pro ($24/month, 15 articles/day). No contracts, cancel anytime. Start with free plan—no credit card required.",
   keywords: [
     "SEO content pricing",
     "AI writer pricing",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "SEOScribe Pricing - Free & Pro Plans Available",
-    description: "Start free with 1 article/week or go Pro for $19.99/month with 15 articles/day. No credit card required for free plan.",
+    description: "Start free with 1 article/week or go Pro for $24/month with 15 articles/day. No credit card required for free plan.",
     type: "website",
     url: "https://seoscribe.com/pricing"
   },
@@ -46,7 +46,7 @@ export default function Page() {
               {
                 "@type": "Offer",
                 "name": "Pro Plan",
-                "price": "19.99",
+                "price": "24",
                 "priceCurrency": "USD",
                 "billingDuration": "P1M",
                 "description": "15 articles per day, 10 tools per day, unlimited revisions"
