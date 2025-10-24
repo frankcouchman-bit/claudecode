@@ -12,28 +12,32 @@
     "lint": "next lint || true"
   },
   "dependencies": {
-    "next": "*",
-    "react": "*",
-    "react-dom": "*",
-    "next-seo": "*",
-    "framer-motion": "*",
-    "lucide-react": "*",
+    "@radix-ui/react-avatar": "*",
+    "@radix-ui/react-dialog": "*",
+    "@radix-ui/react-dropdown-menu": "*",
+    "@radix-ui/react-slot": "*",
+    "@radix-ui/react-tabs": "*",
+    "@supabase/supabase-js": "*",
     "class-variance-authority": "*",
     "clsx": "*",
+    "framer-motion": "*",
+    "isomorphic-dompurify": "*",
+    "lucide-react": "*",
+    "next": "*",
+    "next-seo": "*",
+    "react": "*",
+    "react-dom": "*",
     "tailwind-merge": "*",
     "tailwindcss-animate": "*",
-    "@radix-ui/react-dialog": "*",
-    "@radix-ui/react-slot": "*",
-    "@supabase/supabase-js": "*",
-    "zod": "*",
-    "isomorphic-dompurify": "*"
+    "zod": "*"
   },
   "devDependencies": {
-    "typescript": "*",
+    "@types/react": "19.2.2",
+    "autoprefixer": "^10.4.21",
     "eslint": "*",
     "eslint-config-next": "*",
-    "postcss": "*",
-    "tailwindcss": "*",
-    "autoprefixer": "*"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "typescript": "*"
   }
 }

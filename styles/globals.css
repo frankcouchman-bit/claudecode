@@ -9,23 +9,111 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 262 83% 58%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --radius: 1rem;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 262 83% 58%;
+  --radius: 0.75rem;
 }
 
-html, body { height: 100%; }
-body { @apply bg-background text-foreground antialiased; }
-.container-narrow { @apply max-w-5xl mx-auto px-4; }
-.glass { @apply bg-white/40 backdrop-blur-md border border-white/50 shadow-sm; }
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 262 83% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 262 83% 58%;
+}
+
+html, body {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+.container-narrow {
+  @apply max-w-5xl mx-auto px-4;
+}
+
+.glass {
+  @apply bg-white/40 dark:bg-gray-900/40 backdrop-blur-md border border-white/50 dark:border-gray-700/50 shadow-sm;
+}
+
+/* Gradient Text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600;
+}
+
+/* Gradient Button */
+.gradient-btn {
+  @apply bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 transition-all duration-300;
+}
+
+/* Glow Effect */
+.glow {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+.glow-hover:hover {
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
+}
+
+/* Loading Skeleton */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.skeleton {
+  @apply bg-gray-200 dark:bg-gray-800 rounded;
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(to right, #f0f0f0 4%, #e0e0e0 25%, #f0f0f0 36%);
+  background-size: 1000px 100%;
+}
+
+.dark .skeleton {
+  background: linear-gradient(to right, #1f2937 4%, #374151 25%, #1f2937 36%);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
+}
