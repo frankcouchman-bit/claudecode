@@ -15,12 +15,12 @@ export function Pricing() {
       period: "Forever",
       description: "Perfect for trying out SEOScribe",
       features: [
-        "10,000 words/month",
+        "1 article per week",
+        "AI-generated hero images",
         "Basic SERP research",
         "Export to Markdown",
-        "Community support",
-        "Basic analytics",
-        "1 user"
+        "25+ languages",
+        "Community support"
       ],
       cta: "Start Free",
       variant: "outline" as const,
@@ -32,15 +32,15 @@ export function Pricing() {
       period: "per month",
       description: "Everything you need to dominate SERPs",
       features: [
-        "Unlimited words",
+        "15 articles per day",
+        "AI-generated hero images",
         "Advanced SERP research",
-        "Citations & images",
+        "Auto citations & FAQs",
+        "25+ languages",
+        "Internal link suggestions",
         "Priority support",
         "Advanced analytics",
-        "Unlimited users",
-        "API access",
-        "Custom templates",
-        "White-label exports"
+        "API access"
       ],
       cta: "Get Started",
       popular: true,

@@ -3,6 +3,7 @@
 import Demo from "@/components/sections/demo"
 import { FAQSection } from "@/components/faq-section"
 import { SocialProof, TrustBadges } from "@/components/social-proof"
+import { SEOImprovementChart, RankingProgressBar } from "@/components/seo-visualizations"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -99,7 +100,7 @@ export default function Page() {
     },
     {
       question: "What's the difference between free and pro plans?",
-      answer: "Free plan includes 10,000 words/month with basic features. Pro plan ($24/mo) offers unlimited words, advanced AI models, priority support, team features, API access, and premium templates."
+      answer: "Free plan includes 1 article per week with AI-generated hero images and basic features. Pro plan ($24/mo) offers 15 articles per day, advanced AI models, priority support, team features, and API access."
     }
   ]
 
@@ -174,7 +175,7 @@ export default function Page() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span>10,000 words free</span>
+                <span>1 article per week free</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -287,6 +288,30 @@ export default function Page() {
         </div>
       </section>
 
+      {/* SEO Performance Metrics */}
+      <section className="py-24">
+        <div className="container">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+              Measurable Results
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Content That <span className="gradient-text">Drives Traffic</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              See how AI-generated content performs in search rankings
+            </p>
+          </div>
+
+          <div className="space-y-12">
+            <SEOImprovementChart />
+            <div className="max-w-3xl mx-auto">
+              <RankingProgressBar />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
       <FAQSection
         title="Frequently Asked Questions About AI Writing"
@@ -310,7 +335,7 @@ export default function Page() {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            No credit card required • 10,000 words free • Cancel anytime
+            No credit card required • 1 article per week free • Cancel anytime
           </p>
         </div>
       </section>

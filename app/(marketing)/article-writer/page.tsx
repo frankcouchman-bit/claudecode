@@ -3,6 +3,8 @@
 import Demo from "@/components/sections/demo"
 import { FAQSection } from "@/components/faq-section"
 import { SocialProof, TrustBadges } from "@/components/social-proof"
+import { ImageGenerationShowcase } from "@/components/image-generation-showcase"
+import { SEOImprovementChart, RankingProgressBar, TrafficGrowthGraph } from "@/components/seo-visualizations"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -107,7 +109,7 @@ export default function Page() {
     },
     {
       question: "How many articles can I generate per month?",
-      answer: "Free plan includes 10,000 words per month (approximately 3-5 articles). Pro plan offers unlimited generations, letting you scale your content production without limits."
+      answer: "Free plan includes 1 article per week with AI-generated hero images. Pro plan offers 15 articles per day, letting you scale your content production without limits."
     },
     {
       question: "Does it include keyword research?",
@@ -184,7 +186,7 @@ export default function Page() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span>10,000 words free</span>
+                <span>1 article per week free</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -284,6 +286,24 @@ export default function Page() {
         </div>
       </section>
 
+      {/* AI Image Generation Showcase */}
+      <section className="py-24">
+        <div className="container max-w-5xl">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
+              AI-Powered Visuals
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Every Article Gets a <span className="gradient-text">Unique AI Image</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              No more searching for stock photos. Our Gemini 2.5-powered system generates custom hero images for every article.
+            </p>
+          </div>
+          <ImageGenerationShowcase />
+        </div>
+      </section>
+
       {/* Demo Section */}
       <section id="demo" className="py-24">
         <div className="container max-w-5xl">
@@ -303,6 +323,31 @@ export default function Page() {
       <section className="py-12 border-y bg-muted/20">
         <div className="container">
           <TrustBadges />
+        </div>
+      </section>
+
+      {/* SEO Performance Metrics */}
+      <section className="py-24">
+        <div className="container">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+              Proven Results
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Watch Your Rankings <span className="gradient-text">Soar</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Real metrics from content creators using SEOScribe
+            </p>
+          </div>
+
+          <div className="space-y-12">
+            <SEOImprovementChart />
+            <div className="max-w-3xl mx-auto">
+              <RankingProgressBar />
+            </div>
+            <TrafficGrowthGraph />
+          </div>
         </div>
       </section>
 
@@ -329,7 +374,7 @@ export default function Page() {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            No credit card required • 10,000 words free • Cancel anytime
+            No credit card required • 1 article per week free • Cancel anytime
           </p>
         </div>
       </section>
