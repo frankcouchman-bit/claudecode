@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useQuota } from "@/contexts/quota-context"
+import { canUseTool, recordToolUsage } from "@/lib/quota-enforcement"
+import {
+  generateHeadlines as apiGenerateHeadlines,
+  optimizeMetaTags as apiOptimizeMetaTags,
+  suggestInternalLinks as apiSuggestInternalLinks,
+  analyzeReadability as apiAnalyzeReadability,
+  generateContentBrief as apiGenerateContentBrief,
+  checkKeywordDensity as apiCheckKeywordDensity
+} from "@/lib/api"
 import {
   Heading,
   Tags,
@@ -16,10 +26,14 @@ import {
   BarChart,
   Sparkles,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link"
 
 export default function ToolsPage() {
+  const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
   const [headlineInput, setHeadlineInput] = useState("")
   const [headlineResults, setHeadlineResults] = useState<string[]>([])
   const [metaInput, setMetaInput] = useState("")
@@ -34,6 +48,7 @@ export default function ToolsPage() {
   const [keywordResults, setKeywordResults] = useState<any>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
@@ -41,97 +56,144 @@ export default function ToolsPage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  // Mock functions - replace with actual API calls
-  function generateHeadlines() {
+  function checkQuotaAndRecordUsage(toolName: string): boolean {
+    const { allowed, reason } = canUseTool(quota, isAuthenticated)
+    if (!allowed) {
+      setError(reason || "Tool usage limit reached")
+      return false
+    }
+
+    // Record usage
+    const updatedQuota = recordToolUsage(quota)
+    updateQuota(updatedQuota)
+
+    // Sync with backend
+    if (isAuthenticated) {
+      setTimeout(() => syncWithBackend(), 500)
+    }
+
+    setError(null)
+    return true
+  }
+
+  async function generateHeadlines() {
+    if (!headlineInput.trim()) {
+      setError("Please enter a topic")
+      return
+    }
+
+    if (!checkQuotaAndRecordUsage('headlines')) return
+
     setLoading('headlines')
-    setTimeout(() => {
-      setHeadlineResults([
-        `${headlineInput}: The Ultimate Guide for 2024`,
-        `How to Master ${headlineInput} in 30 Days`,
-        `10 Proven ${headlineInput} Strategies That Actually Work`,
-        `${headlineInput} Secrets: What Experts Don't Tell You`,
-        `The Complete ${headlineInput} Checklist [2024 Edition]`
-      ])
+    try {
+      const result = await apiGenerateHeadlines({ topic: headlineInput })
+      setHeadlineResults(result.headlines || [])
+    } catch (e: any) {
+      setError(e?.message || "Failed to generate headlines")
+      setHeadlineResults([])
+    } finally {
       setLoading(null)
-    }, 1000)
+    }
   }
 
-  function optimizeMetaTags() {
+  async function optimizeMetaTags() {
+    if (!metaInput.trim()) {
+      setError("Please enter a title")
+      return
+    }
+
+    if (!checkQuotaAndRecordUsage('meta')) return
+
     setLoading('meta')
-    setTimeout(() => {
-      setMetaResults({
-        title: `${metaInput} - Complete Guide & Best Practices`,
-        description: `Discover everything about ${metaInput}. Learn proven strategies, tips, and techniques to get results. Updated for 2024.`
-      })
+    try {
+      const result = await apiOptimizeMetaTags({ title: metaInput })
+      setMetaResults(result)
+    } catch (e: any) {
+      setError(e?.message || "Failed to optimize meta tags")
+      setMetaResults(null)
+    } finally {
       setLoading(null)
-    }, 1000)
+    }
   }
 
-  function suggestLinks() {
+  async function suggestLinks() {
+    if (!linkInput.trim()) {
+      setError("Please enter content")
+      return
+    }
+
+    if (!checkQuotaAndRecordUsage('links')) return
+
     setLoading('links')
-    setTimeout(() => {
-      setLinkResults([
-        { anchor: "related guide", url: "/guide" },
-        { anchor: "best practices", url: "/best-practices" },
-        { anchor: "case studies", url: "/case-studies" },
-        { anchor: "FAQ section", url: "/faq" }
-      ])
+    try {
+      const result = await apiSuggestInternalLinks({ content: linkInput })
+      setLinkResults(result.links || [])
+    } catch (e: any) {
+      setError(e?.message || "Failed to suggest links")
+      setLinkResults([])
+    } finally {
       setLoading(null)
-    }, 1000)
+    }
   }
 
-  function analyzeReadability() {
+  async function analyzeReadability() {
+    if (!readabilityInput.trim()) {
+      setError("Please enter content")
+      return
+    }
+
+    if (!checkQuotaAndRecordUsage('readability')) return
+
     setLoading('readability')
-    setTimeout(() => {
-      const words = readabilityInput.split(' ').length
-      const sentences = readabilityInput.split(/[.!?]+/).length
-      const score = Math.min(100, Math.max(0, 100 - (words / sentences) * 3))
-      setReadabilityScore(Math.round(score))
+    try {
+      const result = await apiAnalyzeReadability({ content: readabilityInput })
+      setReadabilityScore(result.score || 0)
+    } catch (e: any) {
+      setError(e?.message || "Failed to analyze readability")
+      setReadabilityScore(null)
+    } finally {
       setLoading(null)
-    }, 1000)
+    }
   }
 
-  function generateBrief() {
+  async function generateBrief() {
+    if (!briefInput.trim()) {
+      setError("Please enter a topic")
+      return
+    }
+
+    if (!checkQuotaAndRecordUsage('brief')) return
+
     setLoading('brief')
-    setTimeout(() => {
-      setBriefResult({
-        outline: [
-          "Introduction",
-          "Main Concept",
-          "Key Benefits",
-          "Step-by-Step Guide",
-          "Common Mistakes",
-          "FAQs",
-          "Conclusion"
-        ],
-        keywords: ["primary keyword", "secondary keyword", "LSI terms"],
-        wordCount: "2000-2500 words recommended"
-      })
+    try {
+      const result = await apiGenerateContentBrief({ topic: briefInput })
+      setBriefResult(result)
+    } catch (e: any) {
+      setError(e?.message || "Failed to generate brief")
+      setBriefResult(null)
+    } finally {
       setLoading(null)
-    }, 1000)
+    }
   }
 
-  function checkKeywordDensity() {
+  async function checkKeywordDensity() {
+    if (!keywordInput.trim()) {
+      setError("Please enter content")
+      return
+    }
+
+    if (!checkQuotaAndRecordUsage('keywords')) return
+
     setLoading('keywords')
-    setTimeout(() => {
-      const words = keywordInput.toLowerCase().split(/\s+/)
-      const frequency: any = {}
-      words.forEach(word => {
-        if (word.length > 3) {
-          frequency[word] = (frequency[word] || 0) + 1
-        }
-      })
-      const sorted = Object.entries(frequency)
-        .sort(([, a]: any, [, b]: any) => b - a)
-        .slice(0, 10)
-        .map(([word, count]: any) => ({
-          word,
-          count,
-          density: ((count / words.length) * 100).toFixed(2)
-        }))
-      setKeywordResults(sorted)
+    try {
+      const result = await apiCheckKeywordDensity({ content: keywordInput })
+      setKeywordResults(result.keywords || [])
+    } catch (e: any) {
+      setError(e?.message || "Failed to check keyword density")
+      setKeywordResults(null)
+    } finally {
       setLoading(null)
-    }, 1000)
+    }
   }
 
   return (
@@ -139,6 +201,48 @@ export default function ToolsPage() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">SEO Writing Tools</h1>
         <p className="text-muted-foreground">Professional tools to optimize your content for search engines</p>
+
+        {/* Quota Info */}
+        {!isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+          >
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Sign in to access all writing tools. Free plan includes 1 tool use per day.
+            </p>
+          </motion.div>
+        )}
+
+        {/* Global Error Banner */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 flex items-center gap-2 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+            >
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <p className="text-sm flex-1">{error}</p>
+              {!isAuthenticated && error.includes("Sign in") && (
+                <Link href="/auth">
+                  <Button size="sm" className="gradient-btn text-white">
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+              {isAuthenticated && error.includes("Upgrade") && (
+                <Link href="/pricing">
+                  <Button size="sm" className="gradient-btn text-white">
+                    Upgrade
+                  </Button>
+                </Link>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <Tabs defaultValue="headline" className="space-y-6">
