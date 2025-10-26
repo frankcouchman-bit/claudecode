@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { getArticle, deleteArticle } from "@/lib/api"
+import { getArticle, deleteArticle, generateDraft, updateArticle } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   ArrowLeft,
   Edit,
@@ -18,7 +20,9 @@ import {
   Share2,
   Link2,
   MessageSquare,
-  Target
+  Target,
+  RefreshCw,
+  Sparkles
 } from "lucide-react"
 
 export default function ArticleViewPage() {
@@ -29,6 +33,9 @@ export default function ArticleViewPage() {
   const [article, setArticle] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false)
+  const [targetWordCount, setTargetWordCount] = useState("3000")
 
   useEffect(() => {
     if (id) {
@@ -61,6 +68,42 @@ export default function ArticleViewPage() {
       alert(e?.message || "Failed to delete article")
     } finally {
       setDeleting(false)
+    }
+  }
+
+  async function handleRegenerate() {
+    if (!article) return
+
+    try {
+      setRegenerating(true)
+      setRegenerateDialogOpen(false)
+
+      // Generate new article with same topic but different word count
+      const newArticle = await generateDraft({
+        topic: article.title || article.topic,
+        tone: article.tone || "professional",
+        language: article.language || "en",
+        target_word_count: parseInt(targetWordCount) || 3000,
+        research: true,
+        generate_social: true,
+        generate_image: true,
+        generate_faqs: true
+      })
+
+      // Update the existing article with new content
+      await updateArticle(id, {
+        ...newArticle,
+        updated_at: new Date().toISOString()
+      })
+
+      // Reload article to show new content
+      await loadArticle()
+
+      alert(`Article successfully regenerated with ~${targetWordCount} words!`)
+    } catch (e: any) {
+      alert(e?.message || "Failed to regenerate article")
+    } finally {
+      setRegenerating(false)
     }
   }
 
@@ -134,7 +177,7 @@ export default function ArticleViewPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => router.push(`/library/${id}/edit`)}
                 className="gradient-btn"
@@ -142,6 +185,79 @@ export default function ArticleViewPage() {
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
               </Button>
+
+              <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
+                    disabled={regenerating}
+                  >
+                    {regenerating ? (
+                      <>
+                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate
+                      </>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-600" />
+                      Regenerate Article
+                    </DialogTitle>
+                    <DialogDescription>
+                      Generate a new version of this article with a different word count. This will replace the existing content.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label className="text-sm font-semibold mb-2 block">Target Word Count</label>
+                      <Select value={targetWordCount} onValueChange={setTargetWordCount}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select word count" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2000">2,000 words</SelectItem>
+                          <SelectItem value="3000">3,000 words (recommended)</SelectItem>
+                          <SelectItem value="4000">4,000 words</SelectItem>
+                          <SelectItem value="5000">5,000 words</SelectItem>
+                          <SelectItem value="6000">6,000 words</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Current article: {article?.word_count?.toLocaleString() || 0} words
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRegenerate}
+                        className="flex-1 gradient-btn"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Regenerate Now
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setRegenerateDialogOpen(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                      <strong>Note:</strong> This will count against your daily article quota and replace the current content.
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
               <Button
                 variant="outline"
                 onClick={handleDelete}

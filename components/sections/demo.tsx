@@ -35,6 +35,7 @@ export default function Demo() {
   const [topic, setTopic] = useState("")
   const [language, setLanguage] = useState("en")
   const [tone, setTone] = useState("professional")
+  const [wordCount, setWordCount] = useState("3000")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,7 +61,7 @@ export default function Demo() {
         topic: topic.trim(),
         tone: tone,
         language: language,
-        target_word_count: 3000,
+        target_word_count: parseInt(wordCount) || 3000,
         research: true,
         generate_social: true,
         generate_image: true,
@@ -114,7 +115,7 @@ export default function Demo() {
               disabled={loading}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <Select value={language} onValueChange={setLanguage} disabled={loading}>
                 <SelectTrigger className="h-12">
                   <Globe className="w-4 h-4 mr-2" />
@@ -150,6 +151,19 @@ export default function Demo() {
                   <SelectItem value="authoritative">Authoritative</SelectItem>
                   <SelectItem value="conversational">Conversational</SelectItem>
                   <SelectItem value="formal">Formal</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={wordCount} onValueChange={setWordCount} disabled={loading}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Word Count" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2000">2,000 words</SelectItem>
+                  <SelectItem value="3000">3,000 words</SelectItem>
+                  <SelectItem value="4000">4,000 words</SelectItem>
+                  <SelectItem value="5000">5,000 words</SelectItem>
+                  <SelectItem value="6000">6,000 words</SelectItem>
                 </SelectContent>
               </Select>
 
