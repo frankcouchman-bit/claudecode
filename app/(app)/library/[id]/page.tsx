@@ -74,37 +74,83 @@ export default function ArticleViewPage() {
   async function handleRegenerate() {
     if (!article) return
 
+    const currentWordCount = article.word_count || 0
+    const targetWords = parseInt(targetWordCount) || 3000
+
+    // If target is same or less than current, warn user
+    if (targetWords <= currentWordCount) {
+      if (!confirm(`Current article has ${currentWordCount} words. Target is ${targetWords} words. This will regenerate (not expand) the article. Continue?`)) {
+        return
+      }
+    }
+
     try {
       setRegenerating(true)
       setRegenerateDialogOpen(false)
 
-      // Generate new article with same topic but different word count
-      const newArticle = await generateDraft({
+      // Prepare existing content for expansion
+      const existingContent = article.markdown || article.html || article.content || ""
+      const existingHeadings = extractHeadings(existingContent)
+
+      // Expand existing article with new content
+      const expandedArticle = await generateDraft({
         topic: article.title || article.topic,
         tone: article.tone || "professional",
         language: article.language || "en",
-        target_word_count: parseInt(targetWordCount) || 3000,
+        target_word_count: targetWords,
         research: true,
         generate_social: true,
         generate_image: true,
-        generate_faqs: true
+        generate_faqs: true,
+        // Include existing content so AI can expand it naturally
+        existing_content: existingContent,
+        existing_headings: existingHeadings,
+        expansion_mode: true,
+        expansion_instructions: `Expand the existing article from ${currentWordCount} words to approximately ${targetWords} words. Add new sections, headings, and detailed content that naturally flows from the existing content. Include additional research, examples, case studies, and deeper explanations. Maintain consistency in tone and style with the existing content.`
       })
 
-      // Update the existing article with new content
+      // Merge expanded content with existing metadata
       await updateArticle(id, {
-        ...newArticle,
+        title: expandedArticle.title || article.title,
+        content: expandedArticle.content,
+        markdown: expandedArticle.markdown,
+        html: expandedArticle.html,
+        word_count: expandedArticle.word_count || targetWords,
+        meta_title: expandedArticle.meta_title || article.meta_title,
+        meta_description: expandedArticle.meta_description || article.meta_description,
+        keywords: expandedArticle.keywords || article.keywords,
+        citations: [...(article.citations || []), ...(expandedArticle.citations || [])],
+        internal_links: [...(article.internal_links || []), ...(expandedArticle.internal_links || [])],
+        faqs: [...(article.faqs || []), ...(expandedArticle.faqs || [])],
+        seo_score: expandedArticle.seo_score || article.seo_score,
         updated_at: new Date().toISOString()
       })
 
-      // Reload article to show new content
+      // Reload article to show expanded content
       await loadArticle()
 
-      alert(`Article successfully regenerated with ~${targetWordCount} words!`)
+      alert(`✅ Article successfully expanded from ${currentWordCount} to ~${targetWords} words!`)
     } catch (e: any) {
-      alert(e?.message || "Failed to regenerate article")
+      alert(e?.message || "Failed to expand article")
     } finally {
       setRegenerating(false)
     }
+  }
+
+  // Helper function to extract headings from content
+  function extractHeadings(content: string): string[] {
+    const headings: string[] = []
+    // Extract markdown headings
+    const mdHeadings = content.match(/^#{1,6}\s+(.+)$/gm)
+    if (mdHeadings) {
+      headings.push(...mdHeadings.map(h => h.replace(/^#+\s+/, '')))
+    }
+    // Extract HTML headings
+    const htmlHeadings = content.match(/<h[1-6][^>]*>(.+?)<\/h[1-6]>/gi)
+    if (htmlHeadings) {
+      headings.push(...htmlHeadings.map(h => h.replace(/<[^>]+>/g, '')))
+    }
+    return headings
   }
 
   function getSEOBadgeColor(score: number) {
@@ -196,12 +242,12 @@ export default function ArticleViewPage() {
                     {regenerating ? (
                       <>
                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
-                        Regenerating...
+                        Expanding...
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Regenerate
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Expand Article
                       </>
                     )}
                   </Button>
@@ -210,10 +256,10 @@ export default function ArticleViewPage() {
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-purple-600" />
-                      Regenerate Article
+                      Expand Article
                     </DialogTitle>
                     <DialogDescription>
-                      Generate a new version of this article with a different word count. This will replace the existing content.
+                      Add more content, headings, and depth to your article. The AI will naturally extend your existing content to reach the target word count.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -241,7 +287,7 @@ export default function ArticleViewPage() {
                         className="flex-1 gradient-btn"
                       >
                         <Sparkles className="w-4 h-4 mr-2" />
-                        Regenerate Now
+                        Expand Article
                       </Button>
                       <Button
                         variant="outline"
@@ -251,9 +297,14 @@ export default function ArticleViewPage() {
                         Cancel
                       </Button>
                     </div>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                      <strong>Note:</strong> This will count against your daily article quota and replace the current content.
-                    </p>
+                    <div className="space-y-2">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                        <strong>How it works:</strong> The AI will analyze your existing content and add new sections, headings, examples, and detailed explanations that naturally flow from what you already have.
+                      </p>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                        <strong>Note:</strong> This counts as 1 article generation against your daily quota.
+                      </p>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
