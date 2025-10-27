@@ -33,12 +33,16 @@ export default function Page(){
     // Capture tokens from URL if present
     captureTokensFromURL()
 
-    // Check if user is already authenticated and redirect to dashboard
-    const token = getAccessToken()
-    if (token) {
-      setRedirecting(true)
-      router.push('/dashboard')
-    }
+    // Small delay to ensure tokens are stored before checking
+    const checkAuth = setTimeout(() => {
+      const token = getAccessToken()
+      if (token) {
+        setRedirecting(true)
+        router.push('/dashboard')
+      }
+    }, 100)
+
+    return () => clearTimeout(checkAuth)
   }, [])
 
   async function magic() {
