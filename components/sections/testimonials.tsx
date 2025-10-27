@@ -99,10 +99,10 @@ export function Testimonials() {
           </motion.div>
 
           <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-            Loved by Content Creators & SEO Experts
+            What Makes SEOScribe Different?
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Join thousands of marketers who've transformed their content strategy with SEOScribe
+            Embedded FAQs, AI images, and citations included—features others charge extra for
           </p>
         </motion.div>
 
@@ -215,7 +215,7 @@ export function Testimonials() {
               ))}
             </div>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              <strong className="text-purple-600 dark:text-purple-400">10,000+</strong> content creators trust SEOScribe
+              <strong className="text-purple-600 dark:text-purple-400">All features included</strong> with every article
             </span>
           </div>
         </motion.div>

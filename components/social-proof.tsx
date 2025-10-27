@@ -1,32 +1,32 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Star, Users, TrendingUp, Award } from "lucide-react"
+import { Image, FileText, Globe, Award } from "lucide-react"
 
 export function SocialProof() {
   const stats = [
     {
-      icon: Users,
-      value: "10,000+",
-      label: "Active Users",
+      icon: Image,
+      value: "AI Images",
+      label: "Included Free",
       color: "from-blue-500 to-cyan-500"
     },
     {
-      icon: Star,
-      value: "4.9/5",
-      label: "User Rating",
+      icon: FileText,
+      value: "Embedded FAQs",
+      label: "Inside Articles",
       color: "from-yellow-500 to-orange-500"
     },
     {
-      icon: TrendingUp,
-      value: "50K+",
-      label: "Articles Generated",
+      icon: Globe,
+      value: "25+ Languages",
+      label: "Same Quality",
       color: "from-green-500 to-emerald-500"
     },
     {
       icon: Award,
-      value: "#1",
-      label: "SEO Content Tool",
+      value: "Citations",
+      label: "Auto-Generated",
       color: "from-purple-500 to-pink-500"
     }
   ]
@@ -64,10 +64,10 @@ export function SocialProof() {
 
 export function TrustBadges() {
   const badges = [
-    "Featured on Product Hunt",
-    "G2 High Performer 2024",
-    "SOC 2 Type II Certified",
-    "GDPR Compliant"
+    "No Credit Card Required",
+    "Cancel Anytime",
+    "All Features Included",
+    "Money-Back Guarantee"
   ]
 
   return (

@@ -4,40 +4,40 @@ import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  Shield,
-  Lock,
+  Image,
+  FileText,
   Award,
-  Users,
+  Globe,
   TrendingUp,
   CheckCircle2,
   Zap,
-  Globe
+  Link2
 } from "lucide-react"
 import { staggerContainer, staggerItem } from "@/lib/premium-effects"
 
 const trustBadges = [
   {
-    icon: Shield,
-    title: "Enterprise Security",
-    description: "Bank-level encryption",
+    icon: Image,
+    title: "AI-Generated Images",
+    description: "Included in every article",
     color: "from-blue-600 to-cyan-600"
   },
   {
-    icon: Lock,
-    title: "Privacy First",
-    description: "Your data stays yours",
+    icon: FileText,
+    title: "Embedded FAQs",
+    description: "Inside article content",
     color: "from-purple-600 to-pink-600"
   },
   {
     icon: Award,
-    title: "Top Rated",
-    description: "4.9/5 average rating",
+    title: "Auto Citations",
+    description: "Credible sources included",
     color: "from-yellow-600 to-orange-600"
   },
   {
-    icon: Users,
-    title: "10,000+ Users",
-    description: "Trusted worldwide",
+    icon: Link2,
+    title: "Internal Links",
+    description: "SEO-optimized suggestions",
     color: "from-green-600 to-emerald-600"
   }
 ]
@@ -45,31 +45,29 @@ const trustBadges = [
 const stats = [
   {
     icon: FileText,
-    value: "50,000+",
-    label: "Articles Generated",
+    value: "2K-6K",
+    label: "Words Per Article",
     color: "text-purple-600"
-  },
-  {
-    icon: TrendingUp,
-    value: "340%",
-    label: "Avg Traffic Increase",
-    color: "text-blue-600"
-  },
-  {
-    icon: Zap,
-    value: "20 min",
-    label: "Average Generation Time",
-    color: "text-green-600"
   },
   {
     icon: Globe,
     value: "25+",
     label: "Languages Supported",
+    color: "text-blue-600"
+  },
+  {
+    icon: Image,
+    value: "FREE",
+    label: "AI Hero Images",
+    color: "text-green-600"
+  },
+  {
+    icon: Zap,
+    value: "< 60s",
+    label: "Generation Time",
     color: "text-pink-600"
   }
 ]
-
-import { FileText } from "lucide-react"
 
 export function TrustSection() {
   return (

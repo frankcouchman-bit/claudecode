@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Sparkles, ArrowRight, CheckCircle2, TrendingUp, Users, Zap } from "lucide-react"
+import { Sparkles, ArrowRight, CheckCircle2, Image, FileText, Globe } from "lucide-react"
 import { PremiumBackground } from "@/components/premium-background"
 import { AnimatedCounter } from "@/components/animated-counter"
 import {
@@ -152,7 +152,7 @@ export function Hero() {
             </motion.div>
           </motion.div>
 
-          {/* Animated Stats with premium depth effects */}
+          {/* Unique Features Showcase */}
           <motion.div
             variants={staggerContainer}
             initial="initial"
@@ -170,12 +170,13 @@ export function Hero() {
                 whileHover={{ rotate: [0, -10, 10, -10, 0] }}
                 transition={{ duration: 0.5 }}
               >
-                <Zap className="w-6 h-6 text-white" />
+                <Image className="w-6 h-6 text-white" />
               </motion.div>
-              <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                <AnimatedCounter value={50000} suffix="+" />
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                AI Images
               </div>
-              <div className="text-sm text-muted-foreground mt-2 font-medium">Articles Generated</div>
+              <div className="text-sm text-muted-foreground mt-2 font-medium">Included in every article</div>
+              <div className="text-xs text-muted-foreground mt-1">Most competitors charge extra</div>
             </motion.div>
 
             <motion.div
@@ -189,12 +190,13 @@ export function Hero() {
                 whileHover={{ rotate: [0, -10, 10, -10, 0] }}
                 transition={{ duration: 0.5 }}
               >
-                <TrendingUp className="w-6 h-6 text-white" />
+                <FileText className="w-6 h-6 text-white" />
               </motion.div>
-              <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                <AnimatedCounter value={4.9} suffix="/5" />
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                Embedded FAQs
               </div>
-              <div className="text-sm text-muted-foreground mt-2 font-medium">User Rating</div>
+              <div className="text-sm text-muted-foreground mt-2 font-medium">Inside article content</div>
+              <div className="text-xs text-muted-foreground mt-1">Boosts word count + SEO</div>
             </motion.div>
 
             <motion.div
@@ -208,12 +210,13 @@ export function Hero() {
                 whileHover={{ rotate: [0, -10, 10, -10, 0] }}
                 transition={{ duration: 0.5 }}
               >
-                <Users className="w-6 h-6 text-white" />
+                <Globe className="w-6 h-6 text-white" />
               </motion.div>
-              <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                <AnimatedCounter value={10000} suffix="+" />
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                25+ Languages
               </div>
-              <div className="text-sm text-muted-foreground mt-2 font-medium">Active Users</div>
+              <div className="text-sm text-muted-foreground mt-2 font-medium">Global content creation</div>
+              <div className="text-xs text-muted-foreground mt-1">Same quality, any language</div>
             </motion.div>
           </motion.div>
         </div>

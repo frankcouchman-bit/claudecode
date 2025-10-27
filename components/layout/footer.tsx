@@ -128,7 +128,7 @@ export function Footer() {
             © {currentYear} SEOScribe. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
-            Built with ❤️ for content creators everywhere
+            Embedded FAQs, Citations & Images—All Included
           </p>
         </div>
       </div>
