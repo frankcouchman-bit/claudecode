@@ -82,12 +82,6 @@ export default function Page() {
               "priceCurrency": "USD",
               "priceValidUntil": "2025-12-31"
             },
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.9",
-              "ratingCount": "10000",
-              "bestRating": "5"
-            },
             "description": "AI-powered SEO content writing platform that generates ranking articles with SERP research, citations, meta tags, and internal links."
           })
         }}

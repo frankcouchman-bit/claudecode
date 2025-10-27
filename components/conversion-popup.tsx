@@ -117,7 +117,7 @@ export function ConversionPopup({ delaySeconds = 15, showExitIntent = true }: Co
               Write Your First SEO Article in 20 Minutes
             </DialogTitle>
             <DialogDescription className="text-lg text-gray-700 dark:text-gray-300">
-              Join 10,000+ content creators who use SEOScribe to rank on page 1 of Google
+              Generate SEO-optimized articles with embedded FAQs, citations, and AI images—all in one click
             </DialogDescription>
           </DialogHeader>
 
@@ -220,10 +220,10 @@ export function ConversionPopup({ delaySeconds = 15, showExitIntent = true }: Co
               </div>
               <div className="flex-1">
                 <div className="font-semibold text-gray-900 dark:text-white text-sm">
-                  Join 10,000+ Content Creators
+                  Everything Included, Nothing Extra
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  "Best SEO writing tool I've ever used" - Stacy Pit, SEO Manager
+                  Hero images, FAQs, citations, schema markup—all generated automatically
                 </div>
               </div>
             </div>

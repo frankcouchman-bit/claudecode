@@ -140,7 +140,7 @@ export function Pricing() {
         viewport={{ once: true }}
         className="mt-16 text-center"
       >
-        <p className="text-sm text-muted-foreground mb-4">Trusted by 10,000+ content creators worldwide</p>
+        <p className="text-sm text-muted-foreground mb-4">AI images, embedded FAQs, and citations included in every article</p>
         <div className="flex flex-wrap justify-center gap-8 items-center text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-green-500" />

@@ -337,7 +337,7 @@ export default function Page() {
               Watch Your Rankings <span className="gradient-text">Soar</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Real metrics from content creators using SEOScribe
+              How SEOScribe helps you rank higher and drive more traffic
             </p>
           </div>
 
@@ -365,7 +365,7 @@ export default function Page() {
             Ready to 10x Your Content Output?
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join 10,000+ content marketers who've already transformed their workflow
+            Start creating SEO-optimized articles with embedded FAQs, citations, and AI images today
           </p>
           <Link href="/auth">
             <Button size="lg" className="gradient-btn text-white px-12 h-16 text-xl">
