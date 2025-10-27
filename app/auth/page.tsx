@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from "react"
-import { captureTokensFromURL, clearTokens } from "@/lib/auth"
+import { useRouter } from "next/navigation"
+import { captureTokensFromURL, clearTokens, getAccessToken } from "@/lib/auth"
 import { sendMagicLink, googleAuthURL } from "@/lib/api"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -21,13 +22,23 @@ import {
 } from "lucide-react"
 
 export default function Page(){
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [err, setErr] = useState<string|null>(null)
   const [loading, setLoading] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
 
   useEffect(() => {
+    // Capture tokens from URL if present
     captureTokensFromURL()
+
+    // Check if user is already authenticated and redirect to dashboard
+    const token = getAccessToken()
+    if (token) {
+      setRedirecting(true)
+      router.push('/dashboard')
+    }
   }, [])
 
   async function magic() {
@@ -72,6 +83,19 @@ export default function Page(){
       description: "From topic to published article"
     }
   ]
+
+  // Show redirecting message if authenticated
+  if (redirecting) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-950 dark:to-gray-900">
+        <PremiumBackground />
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-lg text-muted-foreground">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-950 dark:to-gray-900">

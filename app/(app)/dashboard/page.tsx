@@ -19,7 +19,8 @@ import {
   ArrowUpRight,
   Eye,
   Edit,
-  Clock
+  Clock,
+  CheckCircle2
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -32,13 +33,34 @@ export default function Page(){
   const [profile,setProfile]=useState<any>(null)
   const [articles,setArticles]=useState<any[]>([])
   const [err,setErr]=useState<string|null>(null)
+  const [upgradeSuccess, setUpgradeSuccess] = useState(false)
 
   useEffect(()=>{
     captureTokensFromURL()
     const a=isAuthed()
     setAuthed(a)
     if(!a){ setLoading(false) }
+
+    // Check for upgrade success
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('upgrade') === 'success') {
+        setUpgradeSuccess(true)
+        // Clean up URL
+        window.history.replaceState({}, '', '/dashboard')
+      }
+    }
   },[])
+
+  async function refreshProfile() {
+    if (!authed) return
+    try {
+      const p = await getProfile()
+      setProfile(p)
+    } catch (e: any) {
+      console.error('Failed to refresh profile:', e)
+    }
+  }
 
   useEffect(()=>{
     (async ()=>{
@@ -56,6 +78,16 @@ export default function Page(){
       }
     })()
   },[authed])
+
+  // Refresh profile when upgrade succeeds
+  useEffect(() => {
+    if (upgradeSuccess && authed) {
+      // Wait a bit for Stripe webhook to update the backend
+      setTimeout(() => {
+        refreshProfile()
+      }, 2000)
+    }
+  }, [upgradeSuccess, authed])
 
   async function upgrade(){
     try{
@@ -162,6 +194,21 @@ export default function Page(){
           </Button>
         </div>
       </div>
+
+      {/* Success Message */}
+      {upgradeSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 flex items-center gap-3"
+        >
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold">Welcome to Pro!</p>
+            <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 15 articles per day, 10 tools per day, and unlimited revisions.</p>
+          </div>
+        </motion.div>
+      )}
 
       {err && (
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200">
