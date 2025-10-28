@@ -33,13 +33,22 @@ export default function Page(){
     // Capture tokens from URL if present
     captureTokensFromURL()
 
-    // Check if user is already authenticated and redirect to dashboard
-    const token = getAccessToken()
-    if (token) {
-      setRedirecting(true)
-      router.push('/dashboard')
-    }
-  }, [])
+    // Small delay to ensure tokens are stored before checking
+    const checkAuth = setTimeout(() => {
+      const token = getAccessToken()
+      if (token) {
+        setRedirecting(true)
+        // Use window.location for more reliable redirect in production
+        if (typeof window !== 'undefined') {
+          window.location.href = '/dashboard'
+        } else {
+          router.push('/dashboard')
+        }
+      }
+    }, 200)
+
+    return () => clearTimeout(checkAuth)
+  }, [router])
 
   async function magic() {
     if (!email.trim()) {

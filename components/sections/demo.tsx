@@ -57,6 +57,13 @@ export default function Demo() {
     setError(null)
     setLoading(true)
     try {
+      console.log('Generating article with payload:', {
+        topic: topic.trim(),
+        tone,
+        language,
+        target_word_count: parseInt(wordCount) || 3000
+      })
+
       const r = await generateDraft({
         topic: topic.trim(),
         tone: tone,
@@ -67,6 +74,8 @@ export default function Demo() {
         generate_image: true,
         generate_faqs: true
       })
+
+      console.log('Generation successful:', r)
 
       // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
@@ -79,7 +88,9 @@ export default function Demo() {
 
       setResult(r)
     } catch (e: any) {
-      setError(e?.message || "Failed to generate")
+      console.error('Generation failed:', e)
+      const errorMessage = e?.message || "Failed to generate"
+      setError(`Error: ${errorMessage}. Check browser console for details.`)
     } finally {
       setLoading(false)
     }

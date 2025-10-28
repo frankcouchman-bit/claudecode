@@ -7,10 +7,25 @@ function withAuthHeaders(init: RequestInit = {}): RequestInit {
   return { ...init, headers: { ...headers, ...(init.headers as any || {}) } }
 }
 async function handle(res: Response) {
-  if (!res.ok) { const text = await res.text().catch(()=> ''); throw new Error(text || `Request failed: ${res.status}`) }
+  if (!res.ok) {
+    const text = await res.text().catch(()=> '')
+    let errorMsg = text || `Request failed: ${res.status}`
+    try {
+      const json = JSON.parse(text)
+      errorMsg = json.error || json.message || errorMsg
+    } catch {}
+    throw new Error(errorMsg)
+  }
   const ct = res.headers.get("content-type") || ""; if (ct.includes("application/json")) return res.json(); return res.text()
 }
-export async function generateDraft(payload:any){ const res = await fetch(`${API_BASE}/api/generate-draft`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function generateDraft(payload:any){
+  const url = `${API_BASE}/api/generate-draft`
+  console.log('Calling generateDraft API:', url)
+  console.log('Payload:', payload)
+  const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
+  console.log('Response status:', res.status)
+  return handle(res)
+}
 export async function sendMagicLink(email:string, redirect?:string){ const res = await fetch(`${API_BASE}/auth/magic-link`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ email, redirect }) }); return handle(res) }
 export function googleAuthURL(redirect?:string){ const url = new URL(`${API_BASE}/auth/google`); if(redirect) url.searchParams.set("redirect", redirect); return url.toString() }
 export async function getProfile(){ const res = await fetch(`${API_BASE}/api/profile`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
