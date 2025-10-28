@@ -30,25 +30,39 @@ export default function Page(){
   const [redirecting, setRedirecting] = useState(false)
 
   useEffect(() => {
-    // Capture tokens from URL if present
-    captureTokensFromURL()
+    let mounted = true
 
-    // Small delay to ensure tokens are stored before checking
-    const checkAuth = setTimeout(() => {
-      const token = getAccessToken()
-      if (token) {
-        setRedirecting(true)
-        // Use window.location for more reliable redirect in production
-        if (typeof window !== 'undefined') {
-          window.location.href = '/dashboard'
-        } else {
-          router.push('/dashboard')
+    const handleAuth = () => {
+      // Capture tokens from URL if present
+      captureTokensFromURL()
+
+      // Check auth status after a delay to ensure localStorage is updated
+      setTimeout(() => {
+        if (!mounted) return
+
+        const token = getAccessToken()
+        console.log('Auth check - has token:', !!token)
+
+        if (token) {
+          console.log('Token found, redirecting to dashboard')
+          setRedirecting(true)
+
+          // Use window.location for reliable redirect
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/dashboard'
+            }
+          }, 300)
         }
-      }
-    }, 200)
+      }, 300)
+    }
 
-    return () => clearTimeout(checkAuth)
-  }, [router])
+    handleAuth()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   async function magic() {
     if (!email.trim()) {

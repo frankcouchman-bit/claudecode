@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { generateDraft } from "@/lib/api"
 import { ArticlePreview } from "@/components/article-preview"
+import { normalizeArticleResult } from "@/lib/article-helpers"
 import { useQuota } from "@/contexts/quota-context"
 import {
   canGenerateArticle,
@@ -77,6 +78,9 @@ export default function Demo() {
 
       console.log('Generation successful:', r)
 
+      // Normalize the result for ArticlePreview
+      const normalized = normalizeArticleResult(r)
+
       // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
       updateQuota(updatedQuota)
@@ -86,7 +90,7 @@ export default function Demo() {
         setTimeout(() => syncWithBackend(), 1000)
       }
 
-      setResult(r)
+      setResult(normalized)
     } catch (e: any) {
       console.error('Generation failed:', e)
       const errorMessage = e?.message || "Failed to generate"
