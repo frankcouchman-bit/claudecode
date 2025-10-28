@@ -19,7 +19,7 @@ async function handle(res: Response) {
   const ct = res.headers.get("content-type") || ""; if (ct.includes("application/json")) return res.json(); return res.text()
 }
 export async function generateDraft(payload:any){
-  const url = `${API_BASE}/api/generate-draft`
+  const url = `${API_BASE}/api/draft`
   console.log('Calling generateDraft API:', url)
   console.log('Payload:', payload)
   const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))

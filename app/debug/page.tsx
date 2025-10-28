@@ -17,7 +17,7 @@ export default function DebugPage() {
     setTesting(true)
     setApiTest(null)
 
-    const testUrl = `${API_BASE}/api/generate-draft`
+    const testUrl = `${API_BASE}/api/draft`
     console.log('Testing API:', testUrl)
 
     try {
@@ -30,8 +30,8 @@ export default function DebugPage() {
         body: JSON.stringify({
           topic: 'test article',
           tone: 'professional',
-          language: 'en',
-          target_word_count: 1000
+          target_word_count: 1000,
+          research: false
         })
       })
 
@@ -75,7 +75,7 @@ export default function DebugPage() {
 
         <div className="p-4 border rounded">
           <h2 className="font-semibold mb-2">Full API Endpoint:</h2>
-          <code className="bg-gray-100 p-2 rounded block">{API_BASE}/api/generate-draft</code>
+          <code className="bg-gray-100 p-2 rounded block">{API_BASE}/api/draft</code>
         </div>
 
         <div className="p-4 border rounded">
