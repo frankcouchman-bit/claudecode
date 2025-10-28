@@ -32,29 +32,39 @@ export default function Page(){
   useEffect(() => {
     let mounted = true
 
-    const handleAuth = () => {
-      // Capture tokens from URL if present
-      captureTokensFromURL()
+    console.log('[AUTH PAGE] Component mounted')
 
-      // Check auth status after a delay to ensure localStorage is updated
-      setTimeout(() => {
-        if (!mounted) return
+    const handleAuth = async () => {
+      // First, capture tokens from URL if present
+      const hadTokensInURL = captureTokensFromURL()
 
-        const token = getAccessToken()
-        console.log('Auth check - has token:', !!token)
+      if (hadTokensInURL) {
+        console.log('[AUTH PAGE] Tokens captured from URL, waiting before redirect')
+      }
 
-        if (token) {
-          console.log('Token found, redirecting to dashboard')
-          setRedirecting(true)
+      // Wait a bit for localStorage to sync
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-          // Use window.location for reliable redirect
-          setTimeout(() => {
-            if (typeof window !== 'undefined') {
-              window.location.href = '/dashboard'
-            }
-          }, 300)
-        }
-      }, 300)
+      if (!mounted) return
+
+      // Check if user is authenticated
+      const token = getAccessToken()
+      console.log('[AUTH PAGE] Checking auth status:', !!token)
+
+      if (token) {
+        console.log('[AUTH PAGE] User is authenticated, redirecting to dashboard')
+        setRedirecting(true)
+
+        // Redirect using window.location for reliability
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            console.log('[AUTH PAGE] Executing redirect')
+            window.location.href = '/dashboard'
+          }
+        }, 500)
+      } else {
+        console.log('[AUTH PAGE] User not authenticated, staying on auth page')
+      }
     }
 
     handleAuth()

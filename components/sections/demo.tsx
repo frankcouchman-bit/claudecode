@@ -68,12 +68,9 @@ export default function Demo() {
       const r = await generateDraft({
         topic: topic.trim(),
         tone: tone,
-        language: language,
-        target_word_count: parseInt(wordCount) || 3000,
+        target_word_count: 3000, // Cap at 3000 words for all users
         research: true,
-        generate_social: true,
-        generate_image: true,
-        generate_faqs: true
+        generate_social: true
       })
 
       console.log('Generation successful:', r)
