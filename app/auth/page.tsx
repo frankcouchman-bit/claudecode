@@ -38,12 +38,17 @@ export default function Page(){
       const token = getAccessToken()
       if (token) {
         setRedirecting(true)
-        router.push('/dashboard')
+        // Use window.location for more reliable redirect in production
+        if (typeof window !== 'undefined') {
+          window.location.href = '/dashboard'
+        } else {
+          router.push('/dashboard')
+        }
       }
-    }, 100)
+    }, 200)
 
     return () => clearTimeout(checkAuth)
-  }, [])
+  }, [router])
 
   async function magic() {
     if (!email.trim()) {
