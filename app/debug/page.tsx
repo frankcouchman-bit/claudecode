@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { API_BASE } from '@/lib/api'
+import { API_BASE, googleAuthURL } from '@/lib/api'
 import { getAccessToken } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 
@@ -8,9 +8,18 @@ export default function DebugPage() {
   const [token, setToken] = useState<string | null>(null)
   const [apiTest, setApiTest] = useState<any>(null)
   const [testing, setTesting] = useState(false)
+  const [redirectInfo, setRedirectInfo] = useState<string>('')
+  const [currentOrigin, setCurrentOrigin] = useState<string>('')
 
   useEffect(() => {
     setToken(getAccessToken())
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin
+      setCurrentOrigin(origin)
+      const redirectUrl = `${origin}/auth`
+      const authUrl = googleAuthURL(redirectUrl)
+      setRedirectInfo(`Current Origin: ${origin}\n\nRedirect URL: ${redirectUrl}\n\nFull Google Auth URL:\n${authUrl}\n\nBackend API: ${API_BASE}`)
+    }
   }, [])
 
   const testAPI = async () => {
@@ -97,6 +106,13 @@ export default function DebugPage() {
           )}
         </div>
 
+        <div className="p-4 border rounded">
+          <h2 className="font-semibold mb-2">Auth Redirect URLs:</h2>
+          <pre className="bg-gray-100 p-2 rounded overflow-auto text-xs whitespace-pre-wrap">
+            {redirectInfo}
+          </pre>
+        </div>
+
         <div className="p-4 border rounded bg-yellow-50">
           <h2 className="font-semibold mb-2">Instructions:</h2>
           <ol className="list-decimal list-inside space-y-2 text-sm">
@@ -105,6 +121,17 @@ export default function DebugPage() {
             <li>Check browser console (F12) for detailed logs</li>
             <li>If you get "Not found", the backend endpoint may be wrong</li>
           </ol>
+        </div>
+
+        <div className="p-4 border rounded bg-red-50">
+          <h2 className="font-semibold mb-2 text-red-800">⚠️ Backend Configuration Required:</h2>
+          <p className="text-sm mb-2">For authentication to work, your Cloudflare Worker must have this in the FRONTEND_URL environment variable:</p>
+          <code className="bg-red-100 p-2 rounded block text-xs">
+            {currentOrigin || 'Loading...'}
+          </code>
+          <p className="text-xs mt-2 text-red-700">
+            Without this, Google OAuth will fail with "site can't be reached" error.
+          </p>
         </div>
       </div>
     </div>
