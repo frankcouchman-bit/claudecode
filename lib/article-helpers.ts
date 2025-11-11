@@ -28,6 +28,35 @@ export function articleToHTML(article: any): string {
     })
   }
 
+  // Add FAQs section
+  if (Array.isArray(article.faqs) && article.faqs.length > 0) {
+    html += `<h2>Frequently Asked Questions</h2>\n\n`
+    article.faqs.forEach((faq: any) => {
+      const question = faq.q || faq.question || ''
+      const answer = faq.a || faq.answer || ''
+      if (question && answer) {
+        html += `<h3>${question}</h3>\n`
+        html += `<p>${answer}</p>\n\n`
+      }
+    })
+  }
+
+  // Add Citations/Sources section
+  if (Array.isArray(article.citations) && article.citations.length > 0) {
+    html += `<h2>Sources & References</h2>\n\n`
+    html += `<ol>\n`
+    article.citations.forEach((cite: any) => {
+      const title = cite.title || cite.url || 'Source'
+      const url = cite.url || '#'
+      html += `  <li><a href="${url}" target="_blank" rel="noopener noreferrer">${title}</a>`
+      if (cite.description) {
+        html += ` - ${cite.description}`
+      }
+      html += `</li>\n`
+    })
+    html += `</ol>\n\n`
+  }
+
   return html
 }
 

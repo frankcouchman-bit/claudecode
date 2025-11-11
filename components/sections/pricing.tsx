@@ -10,16 +10,19 @@ import Link from "next/link"
 export function Pricing() {
   const plans = [
     {
-      name: "Starter",
+      name: "Free",
       price: "Free",
       period: "Forever",
-      description: "Perfect for trying out SEOScribe",
+      description: "Full features with daily quota",
       features: [
-        "1 article per week",
+        "1 article per day (31/month)",
         "AI-generated hero images",
-        "Basic SERP research",
-        "Export to Markdown",
+        "Advanced SERP research",
+        "Auto citations & FAQs",
+        "Social media posts",
         "25+ languages",
+        "Export to Markdown/HTML",
+        "1 tool use per day",
         "Community support"
       ],
       cta: "Start Free",
@@ -30,17 +33,18 @@ export function Pricing() {
       name: "Pro",
       price: "$24",
       period: "per month",
-      description: "Everything you need to dominate SERPs",
+      description: "Higher quota for power users",
       features: [
         "15 articles per day",
         "AI-generated hero images",
         "Advanced SERP research",
         "Auto citations & FAQs",
+        "Social media posts",
         "25+ languages",
-        "Internal link suggestions",
+        "Export to Markdown/HTML",
+        "10 tool uses per day",
         "Priority support",
-        "Advanced analytics",
-        "API access"
+        "Advanced analytics"
       ],
       cta: "Get Started",
       popular: true,

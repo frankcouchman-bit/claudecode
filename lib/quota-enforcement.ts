@@ -14,10 +14,10 @@ export interface QuotaLimits {
   toolsToday: number
 }
 
-const DEMO_LOCKOUT_DAYS = 30
-const FREE_ARTICLES_PER_WEEK = 1
+const DEMO_LOCKOUT_DAYS = 30 // Not used anymore - demo users have unlimited access
+const FREE_ARTICLES_PER_DAY = 1 // Free users: 1 per day (31 per month)
 const FREE_TOOLS_PER_DAY = 1
-const PRO_ARTICLES_PER_DAY = 15
+const PRO_ARTICLES_PER_DAY = 15 // Pro users: 15 per day (9999 per month backend limit)
 const PRO_TOOLS_PER_DAY = 10
 
 // Get quota from localStorage
@@ -40,8 +40,8 @@ export function getQuota(): QuotaLimits {
 function getDefaultQuota(): QuotaLimits {
   return {
     plan: 'free',
-    articlesPerDay: 0,
-    articlesPerWeek: FREE_ARTICLES_PER_WEEK,
+    articlesPerDay: FREE_ARTICLES_PER_DAY,
+    articlesPerWeek: 0,
     toolsPerDay: FREE_TOOLS_PER_DAY,
     demoUsed: false,
     todayGenerations: 0,
@@ -58,30 +58,19 @@ export function saveQuota(quota: QuotaLimits) {
 
 // Check if user can generate article
 export function canGenerateArticle(quota: QuotaLimits, isAuthenticated: boolean): { allowed: boolean; reason?: string } {
-  // Guest users - check demo lockout
+  // Guest/Demo users - unlimited generations with all features
+  // They get everything Pro users get (FAQs, citations, images, social posts)
+  // No lockout, no restrictions
   if (!isAuthenticated) {
-    if (quota.demoUsed && quota.demoUsedAt) {
-      const usedDate = new Date(quota.demoUsedAt)
-      const now = new Date()
-      const daysDiff = Math.floor((now.getTime() - usedDate.getTime()) / (1000 * 60 * 60 * 24))
-
-      if (daysDiff < DEMO_LOCKOUT_DAYS) {
-        const daysLeft = DEMO_LOCKOUT_DAYS - daysDiff
-        return {
-          allowed: false,
-          reason: `Demo locked. Sign up or wait ${daysLeft} days.`
-        }
-      }
-    }
-    return { allowed: true } // First demo use
+    return { allowed: true }
   }
 
-  // Free plan - 1 article per week
+  // Free plan - 1 article per day (31 per month)
   if (quota.plan === 'free') {
-    if (quota.weekGenerations >= FREE_ARTICLES_PER_WEEK) {
+    if (quota.todayGenerations >= FREE_ARTICLES_PER_DAY) {
       return {
         allowed: false,
-        reason: 'Weekly limit reached. Upgrade to Pro for 15 articles/day.'
+        reason: 'Daily limit reached (1 article). Upgrade to Pro for 15 articles/day.'
       }
     }
     return { allowed: true }
@@ -208,8 +197,8 @@ export function updatePlan(quota: QuotaLimits, newPlan: 'free' | 'pro'): QuotaLi
   return {
     ...quota,
     plan: newPlan,
-    articlesPerDay: newPlan === 'pro' ? PRO_ARTICLES_PER_DAY : 0,
-    articlesPerWeek: newPlan === 'free' ? FREE_ARTICLES_PER_WEEK : 0,
+    articlesPerDay: newPlan === 'pro' ? PRO_ARTICLES_PER_DAY : FREE_ARTICLES_PER_DAY,
+    articlesPerWeek: 0, // Not used anymore
     toolsPerDay: newPlan === 'pro' ? PRO_TOOLS_PER_DAY : FREE_TOOLS_PER_DAY
   }
 }
@@ -217,8 +206,8 @@ export function updatePlan(quota: QuotaLimits, newPlan: 'free' | 'pro'): QuotaLi
 // Get remaining quota display
 export function getRemainingQuota(quota: QuotaLimits): string {
   if (quota.plan === 'free') {
-    const remaining = FREE_ARTICLES_PER_WEEK - quota.weekGenerations
-    return `${remaining} article${remaining !== 1 ? 's' : ''} left this week`
+    const remaining = FREE_ARTICLES_PER_DAY - quota.todayGenerations
+    return `${remaining}/${FREE_ARTICLES_PER_DAY} article${remaining !== 1 ? 's' : ''} left today`
   }
 
   const remaining = PRO_ARTICLES_PER_DAY - quota.todayGenerations

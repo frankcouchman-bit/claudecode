@@ -276,7 +276,7 @@ export default function Page(){
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {isPro ? `${15 - todayGens} articles left today` : `Resets daily • 7 per month limit`}
+              {isPro ? `${15 - todayGens} articles left today` : `Resets daily • ${Math.max(1 - todayGens, 0)} left today`}
             </p>
           </CardContent>
         </Card>
