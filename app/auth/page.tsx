@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { captureTokensFromURL, getAccessToken } from "@/lib/auth"
-import { googleAuthURL, testGoogleAuthEndpoint, API_BASE } from "@/lib/api"
+import { googleAuthURL, API_BASE } from "@/lib/api"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -71,48 +71,23 @@ export default function Page(){
   }, [])
 
   const handleGoogleSignIn = async () => {
-    try {
+    if (typeof window !== 'undefined') {
       setSigningIn(true)
       setAuthError(null)
 
-      if (typeof window !== 'undefined') {
-        const redirectUrl = `${window.location.origin}/auth`
-        console.log('[AUTH PAGE] Testing OAuth endpoint before redirect...')
-        console.log('[AUTH PAGE] Current origin:', window.location.origin)
-        console.log('[AUTH PAGE] Redirect URL:', redirectUrl)
-        console.log('[AUTH PAGE] Backend API:', API_BASE)
+      const redirectUrl = `${window.location.origin}/auth`
+      const authUrl = googleAuthURL(redirectUrl)
 
-        // Test the OAuth endpoint first
-        const testResult = await testGoogleAuthEndpoint(redirectUrl)
-        console.log('[AUTH PAGE] OAuth endpoint test result:', testResult)
+      console.log('[AUTH PAGE] Initiating Google OAuth sign-in')
+      console.log('[AUTH PAGE] Current origin:', window.location.origin)
+      console.log('[AUTH PAGE] Redirect URL:', redirectUrl)
+      console.log('[AUTH PAGE] Backend API:', API_BASE)
+      console.log('[AUTH PAGE] Full OAuth URL:', authUrl)
 
-        if (!testResult.ok) {
-          // OAuth endpoint is not working correctly
-          let errorMessage = 'Google OAuth is not configured correctly.'
-
-          if (testResult.status === 403 || testResult.body?.includes('Access denied')) {
-            errorMessage = `The backend rejected the sign-in request. This usually means the FRONTEND_URL environment variable in your Cloudflare Worker is not set to "${window.location.origin}".`
-          } else if (testResult.error) {
-            errorMessage = `Network error: ${testResult.error}`
-          } else if (testResult.status) {
-            errorMessage = `Backend returned error ${testResult.status}: ${testResult.body || testResult.statusText}`
-          }
-
-          console.error('[AUTH PAGE] OAuth endpoint test failed:', errorMessage)
-          setAuthError(errorMessage)
-          setSigningIn(false)
-          return
-        }
-
-        // OAuth endpoint is working, redirect to Google
-        const authUrl = googleAuthURL(redirectUrl)
-        console.log('[AUTH PAGE] OAuth endpoint is healthy, redirecting to:', authUrl)
-        window.location.href = authUrl
-      }
-    } catch (error: any) {
-      console.error('[AUTH PAGE] Sign-in error:', error)
-      setAuthError(error?.message || 'Failed to initiate sign-in. Please try again.')
-      setSigningIn(false)
+      // Redirect to OAuth endpoint - the backend will redirect to Google
+      // Note: We don't pre-test the endpoint because CORS prevents reliable testing
+      // If there's a configuration issue, the user will see an error page from the backend
+      window.location.href = authUrl
     }
   }
 
