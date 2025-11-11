@@ -125,12 +125,26 @@ export default function DebugPage() {
 
         <div className="p-4 border rounded bg-red-50">
           <h2 className="font-semibold mb-2 text-red-800">⚠️ Backend Configuration Required:</h2>
-          <p className="text-sm mb-2">For authentication to work, your Cloudflare Worker must have this in the FRONTEND_URL environment variable:</p>
-          <code className="bg-red-100 p-2 rounded block text-xs">
+          <p className="text-sm mb-4">For authentication to work properly, verify these settings:</p>
+
+          <h3 className="text-sm font-semibold mt-3 mb-1">1. FRONTEND_URL Environment Variable</h3>
+          <p className="text-xs mb-2">Your Cloudflare Worker must have this URL in FRONTEND_URL:</p>
+          <code className="bg-red-100 p-2 rounded block text-xs mb-3">
             {currentOrigin || 'Loading...'}
           </code>
-          <p className="text-xs mt-2 text-red-700">
-            Without this, Google OAuth will fail with "site can't be reached" error.
+
+          <h3 className="text-sm font-semibold mt-3 mb-1">2. Supabase Configuration</h3>
+          <p className="text-xs mb-2">If you're seeing "site can't be reached" when trying to sign in with Google, check:</p>
+          <ul className="text-xs list-disc list-inside space-y-1 mb-3">
+            <li>SUPABASE_URL is correct in your Cloudflare Worker</li>
+            <li>Supabase project exists and is not paused/deleted</li>
+            <li>Google OAuth is configured in Supabase Dashboard → Authentication → Providers</li>
+            <li>Redirect URLs are whitelisted in Google Cloud Console</li>
+          </ul>
+
+          <h3 className="text-sm font-semibold mt-3 mb-1">3. Alternative: Use Magic Link</h3>
+          <p className="text-xs">
+            If Google OAuth isn't working, try signing in with email magic link instead. It doesn't require OAuth configuration.
           </p>
         </div>
       </div>
