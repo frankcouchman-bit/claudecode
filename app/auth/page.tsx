@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { captureTokensFromURL, getAccessToken } from "@/lib/auth"
-import { googleAuthURL } from "@/lib/api"
+import { googleAuthURL, testGoogleAuthEndpoint, API_BASE } from "@/lib/api"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -77,24 +77,36 @@ export default function Page(){
 
       if (typeof window !== 'undefined') {
         const redirectUrl = `${window.location.origin}/auth`
-        console.log('[AUTH PAGE] Google sign-in redirect URL:', redirectUrl)
+        console.log('[AUTH PAGE] Testing OAuth endpoint before redirect...')
+        console.log('[AUTH PAGE] Current origin:', window.location.origin)
+        console.log('[AUTH PAGE] Redirect URL:', redirectUrl)
+        console.log('[AUTH PAGE] Backend API:', API_BASE)
 
-        const authUrl = googleAuthURL(redirectUrl)
-        console.log('[AUTH PAGE] Full Google auth URL:', authUrl)
+        // Test the OAuth endpoint first
+        const testResult = await testGoogleAuthEndpoint(redirectUrl)
+        console.log('[AUTH PAGE] OAuth endpoint test result:', testResult)
 
-        // Test if the backend is reachable before redirecting
-        try {
-          const testResponse = await fetch(authUrl, {
-            method: 'HEAD',
-            mode: 'no-cors'
-          }).catch(() => null)
+        if (!testResult.ok) {
+          // OAuth endpoint is not working correctly
+          let errorMessage = 'Google OAuth is not configured correctly.'
 
-          console.log('[AUTH PAGE] Backend test response:', testResponse)
-        } catch (testError) {
-          console.warn('[AUTH PAGE] Backend test failed, proceeding anyway:', testError)
+          if (testResult.status === 403 || testResult.body?.includes('Access denied')) {
+            errorMessage = `The backend rejected the sign-in request. This usually means the FRONTEND_URL environment variable in your Cloudflare Worker is not set to "${window.location.origin}".`
+          } else if (testResult.error) {
+            errorMessage = `Network error: ${testResult.error}`
+          } else if (testResult.status) {
+            errorMessage = `Backend returned error ${testResult.status}: ${testResult.body || testResult.statusText}`
+          }
+
+          console.error('[AUTH PAGE] OAuth endpoint test failed:', errorMessage)
+          setAuthError(errorMessage)
+          setSigningIn(false)
+          return
         }
 
-        // Redirect to Google OAuth
+        // OAuth endpoint is working, redirect to Google
+        const authUrl = googleAuthURL(redirectUrl)
+        console.log('[AUTH PAGE] OAuth endpoint is healthy, redirecting to:', authUrl)
         window.location.href = authUrl
       }
     } catch (error: any) {
@@ -275,20 +287,40 @@ export default function Page(){
                           <p className="text-sm text-red-700 dark:text-red-300 mb-3">
                             {authError}
                           </p>
+
+                          {authError.includes('FRONTEND_URL') && typeof window !== 'undefined' && (
+                            <div className="text-xs bg-red-100 dark:bg-red-900/40 p-3 rounded border border-red-200 dark:border-red-800 mb-3">
+                              <p className="font-semibold mb-2">How to fix this:</p>
+                              <ol className="list-decimal list-inside space-y-1 ml-1">
+                                <li>Go to your Cloudflare dashboard</li>
+                                <li>Open your Worker ({API_BASE.includes('seoscribe') ? 'seoscribe' : 'your worker'})</li>
+                                <li>Go to Settings → Variables</li>
+                                <li>Set <code className="bg-red-200 dark:bg-red-800 px-1 rounded font-mono">FRONTEND_URL</code> to: <code className="bg-red-200 dark:bg-red-800 px-1 rounded font-mono">{window.location.origin}</code></li>
+                                <li>Save and deploy your Worker</li>
+                              </ol>
+                            </div>
+                          )}
+
                           <div className="text-xs text-red-600 dark:text-red-400">
-                            <p className="mb-1">Please check:</p>
+                            <p className="mb-1">Other things to check:</p>
                             <ul className="list-disc list-inside space-y-0.5 ml-1">
                               <li>Your internet connection is stable</li>
-                              <li>The backend API is configured correctly</li>
                               <li>Google OAuth is enabled in your Supabase project</li>
+                              <li>The backend API URL is correct</li>
                             </ul>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                          <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800 flex gap-3">
                             <Link
                               href="/debug"
                               className="text-xs text-red-700 dark:text-red-300 hover:underline font-medium"
                             >
-                              View Debug Information →
+                              View Debug Info →
+                            </Link>
+                            <Link
+                              href="/setup"
+                              className="text-xs text-red-700 dark:text-red-300 hover:underline font-medium"
+                            >
+                              Setup Guide →
                             </Link>
                           </div>
                         </div>

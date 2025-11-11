@@ -28,6 +28,22 @@ export async function generateDraft(payload:any){
 }
 export async function sendMagicLink(email:string, redirect?:string){ const res = await fetch(`${API_BASE}/auth/magic-link`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ email, redirect }) }); return handle(res) }
 export function googleAuthURL(redirect?:string){ const url = new URL(`${API_BASE}/auth/google`); if(redirect) url.searchParams.set("redirect", redirect); return url.toString() }
+export async function testGoogleAuthEndpoint(redirect?:string){
+  try {
+    const url = new URL(`${API_BASE}/auth/google`);
+    if(redirect) url.searchParams.set("redirect", redirect);
+    const res = await fetch(url.toString(), { method: 'GET', redirect: 'manual' });
+    return {
+      ok: res.status === 302 || res.status === 301,
+      status: res.status,
+      statusText: res.statusText,
+      location: res.headers.get('location'),
+      body: await res.text().catch(() => '')
+    };
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+}
 export async function getProfile(){ const res = await fetch(`${API_BASE}/api/profile`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
 export async function listArticles(){ const res = await fetch(`${API_BASE}/api/articles`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
 export async function getArticle(id: string){ const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
