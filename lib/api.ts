@@ -27,7 +27,13 @@ export async function generateDraft(payload:any){
   return handle(res)
 }
 export async function sendMagicLink(email:string, redirect?:string){ const res = await fetch(`${API_BASE}/auth/magic-link`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ email, redirect }) }); return handle(res) }
-export function googleAuthURL(redirect?:string){ const url = new URL(`${API_BASE}/auth/google`); if(redirect) url.searchParams.set("redirect", redirect); return url.toString() }
+export function googleAuthURL(redirect?:string){
+  const url = new URL(`${API_BASE}/auth/google`);
+  if(redirect) url.searchParams.set("redirect", redirect);
+  // Add prompt=select_account to force Google account picker
+  url.searchParams.set("prompt", "select_account");
+  return url.toString();
+}
 export async function testGoogleAuthEndpoint(redirect?:string){
   try {
     const url = new URL(`${API_BASE}/auth/google`);
