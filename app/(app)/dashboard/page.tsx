@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { captureTokensFromURL, isAuthed, clearTokens } from "@/lib/auth"
 import { getProfile, listArticles, createCheckout, openPortal } from "@/lib/api"
@@ -60,7 +60,7 @@ export default function Page(){
     }
   },[mounted])
 
-  async function refreshProfile() {
+  const refreshProfile = useCallback(async () => {
     if (!authed) return
     try {
       const p = await getProfile()
@@ -68,7 +68,7 @@ export default function Page(){
     } catch (e: any) {
       console.error('Failed to refresh profile:', e)
     }
-  }
+  }, [authed])
 
   useEffect(()=>{
     (async ()=>{
@@ -91,29 +91,38 @@ export default function Page(){
   useEffect(() => {
     if (upgradeSuccess && authed) {
       // Wait a bit for Stripe webhook to update the backend
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         refreshProfile()
       }, 2000)
+      return () => clearTimeout(timer)
     }
-  }, [upgradeSuccess, authed])
+  }, [upgradeSuccess, authed, refreshProfile])
 
   async function upgrade(){
+    if (typeof window === 'undefined') return
     try{
       const {url}=await createCheckout(
         window.location.origin+'/dashboard?upgrade=success',
         window.location.origin+'/dashboard?upgrade=cancel'
       )
-      window.location.href=url
+      if (url) {
+        window.location.href=url
+      }
     }catch(e:any){
+      console.error('Upgrade error:', e)
       alert(e?.message||'Checkout failed')
     }
   }
 
   async function portal(){
+    if (typeof window === 'undefined') return
     try{
       const {url}=await openPortal(window.location.origin+'/dashboard')
-      window.location.href=url
+      if (url) {
+        window.location.href=url
+      }
     }catch(e:any){
+      console.error('Portal error:', e)
       alert(e?.message||'Portal failed')
     }
   }
@@ -171,10 +180,22 @@ export default function Page(){
   const toolsToday = profile?.tools_today ?? 0
   const toolLimit = profile?.tool_limit_daily ?? 0
 
-  // Get recent articles (last 5)
-  const recentArticles = [...articles]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5)
+  // Get recent articles (last 5) with safe date handling
+  let recentArticles: any[] = []
+  try {
+    recentArticles = [...(articles || [])]
+      .filter(article => article && article.created_at)
+      .sort((a, b) => {
+        const dateA = new Date(b.created_at).getTime()
+        const dateB = new Date(a.created_at).getTime()
+        if (isNaN(dateA) || isNaN(dateB)) return 0
+        return dateA - dateB
+      })
+      .slice(0, 5)
+  } catch (e) {
+    console.error('Error sorting articles:', e)
+    recentArticles = []
+  }
 
   function getSEOBadgeColor(score: number) {
     if (score >= 80) return "bg-green-500 text-white"
