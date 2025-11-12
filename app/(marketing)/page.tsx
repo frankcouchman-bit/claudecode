@@ -8,6 +8,7 @@ import { TrustSection } from "@/components/sections/trust-section"
 import { FAQ } from "@/components/sections/faq"
 import { Pricing } from "@/components/sections/pricing"
 import { ConversionPopup } from "@/components/conversion-popup"
+import { AuthRedirectHandler } from "@/components/auth-redirect-handler"
 
 export const metadata: Metadata = {
   title: "SEOScribe - AI SEO Content Writer | Generate Ranking Articles in Minutes",
@@ -65,7 +66,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <>
+    <AuthRedirectHandler>
       {/* JSON-LD Structured Data for SEO */}
       <script
         type="application/ld+json"
@@ -115,6 +116,6 @@ export default function Page() {
         {/* FAQ Section */}
         <FAQ />
       </div>
-    </>
+    </AuthRedirectHandler>
   )
 }

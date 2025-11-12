@@ -42,9 +42,26 @@ export function captureTokensFromURL(){
   const url = new URL(window.location.href);
   console.log('[AUTH] Checking URL for tokens:', window.location.href)
 
-  const at = url.searchParams.get('access_token');
-  const rt = url.searchParams.get('refresh_token');
-  const type = url.searchParams.get('type') || 'signup';
+  // Check query parameters first (?access_token=...)
+  let at = url.searchParams.get('access_token');
+  let rt = url.searchParams.get('refresh_token');
+  let type = url.searchParams.get('type') || 'oauth';
+
+  // If not in query params, check URL hash (#access_token=...)
+  if (!at && url.hash) {
+    console.log('[AUTH] Checking URL hash for tokens:', url.hash)
+    const hashParams = new URLSearchParams(url.hash.substring(1)); // Remove the '#'
+    at = hashParams.get('access_token');
+    rt = hashParams.get('refresh_token');
+    type = hashParams.get('type') || 'oauth';
+
+    console.log('[AUTH] Hash params:', {
+      hasAccess: !!at,
+      hasRefresh: !!rt,
+      type,
+      accessTokenPreview: at ? `${at.substring(0,20)}...` : 'none'
+    })
+  }
 
   console.log('[AUTH] URL params:', {
     hasAccess: !!at,
@@ -57,13 +74,14 @@ export function captureTokensFromURL(){
     console.log('[AUTH] Found tokens in URL, saving to localStorage')
     setTokens(at, rt||'', type);
 
-    // Clean URL
+    // Clean URL - remove both query params and hash
     url.searchParams.delete('access_token');
     url.searchParams.delete('refresh_token');
     url.searchParams.delete('type');
+    url.hash = ''; // Clear hash
 
     try {
-      window.history.replaceState(null, '', url.toString())
+      window.history.replaceState(null, '', url.pathname + url.search)
       console.log('[AUTH] URL cleaned')
     } catch(e) {
       console.error('[AUTH] Failed to clean URL:', e)
