@@ -21,18 +21,39 @@ interface QuotaContextType {
 const QuotaContext = createContext<QuotaContextType | undefined>(undefined)
 
 export function QuotaProvider({ children }: { children: ReactNode }) {
-  const [quota, setQuota] = useState<QuotaLimits>(getQuota())
+  const [mounted, setMounted] = useState(false)
+  const [quota, setQuota] = useState<QuotaLimits>({
+    plan: 'free',
+    todayGenerations: 0,
+    weekGenerations: 0,
+    toolsToday: 0,
+    articlesPerDay: 1,
+    articlesPerWeek: 0,
+    toolsPerDay: 1,
+    demoUsed: false,
+  })
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // Handle mounting
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Initialize auth and sync with backend
   useEffect(() => {
+    if (!mounted) return
+
     const authed = isAuthed()
     setIsAuthenticated(authed)
+
+    // Load quota from localStorage after mount
+    const storedQuota = getQuota()
+    setQuota(storedQuota)
 
     if (authed) {
       syncWithBackend()
     }
-  }, [])
+  }, [mounted])
 
   // Sync local quota with backend profile
   const syncWithBackend = useCallback(async () => {
@@ -70,7 +91,11 @@ export function QuotaProvider({ children }: { children: ReactNode }) {
 
   // Listen for plan upgrades (e.g., from Stripe redirect)
   useEffect(() => {
+    if (!mounted) return
+
     const checkForUpgrade = () => {
+      if (typeof window === 'undefined') return
+
       const urlParams = new URLSearchParams(window.location.search)
       const upgradeSuccess = urlParams.get('upgrade')
 
@@ -81,7 +106,7 @@ export function QuotaProvider({ children }: { children: ReactNode }) {
     }
 
     checkForUpgrade()
-  }, [syncWithBackend])
+  }, [mounted, syncWithBackend])
 
   // Auto-refresh quota every 5 minutes
   useEffect(() => {

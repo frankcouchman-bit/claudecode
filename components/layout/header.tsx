@@ -21,12 +21,19 @@ import { getProfile } from "@/lib/api"
 
 export function Header() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     const checkAuth = async () => {
       const authed = isAuthed()
       console.log('[HEADER] Auth check:', authed)
@@ -45,7 +52,7 @@ export function Header() {
     }
 
     checkAuth()
-  }, [])
+  }, [mounted])
 
   const handleSignOut = () => {
     clearTokens()
@@ -61,6 +68,22 @@ export function Header() {
     { href: "/pricing", label: "Pricing" },
     { href: "/blog", label: "Blog" },
   ]
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <header className="sticky top-0 z-50 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm">
+        <div className="container flex h-16 items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 font-bold text-xl group">
+            <div className="p-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 group-hover:shadow-lg group-hover:shadow-purple-500/50 transition-all">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="gradient-text">SEOScribe</span>
+          </Link>
+        </div>
+      </header>
+    )
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm">

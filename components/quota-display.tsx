@@ -16,10 +16,17 @@ interface QuotaDisplayProps {
 }
 
 export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) {
+  const [mounted, setMounted] = useState(false)
   const [quota, setQuota] = useState<QuotaLimits | null>(null)
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     const currentQuota = getQuota()
     setQuota(currentQuota)
 
@@ -27,9 +34,9 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
     if (isAuthenticated && currentQuota.plan === 'free' && currentQuota.weekGenerations >= 1) {
       setShowUpgradePrompt(true)
     }
-  }, [isAuthenticated])
+  }, [mounted, isAuthenticated])
 
-  if (!quota) return null
+  if (!mounted || !quota) return null
 
   const isPro = quota.plan === 'pro'
   const articlesMax = isPro ? 15 : 1
@@ -209,13 +216,19 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
 
 // Mini quota indicator for header
 export function QuotaBadge({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const [mounted, setMounted] = useState(false)
   const [quota, setQuota] = useState<QuotaLimits | null>(null)
 
   useEffect(() => {
-    setQuota(getQuota())
+    setMounted(true)
   }, [])
 
-  if (!quota || !isAuthenticated) return null
+  useEffect(() => {
+    if (!mounted) return
+    setQuota(getQuota())
+  }, [mounted])
+
+  if (!mounted || !quota || !isAuthenticated) return null
 
   const isPro = quota.plan === 'pro'
   const remaining = isPro

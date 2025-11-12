@@ -34,6 +34,7 @@ import {
 
 export default function LibraryPage() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const [articles, setArticles] = useState<any[]>([])
   const [filteredArticles, setFilteredArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,8 +44,13 @@ export default function LibraryPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadArticles()
+    setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    loadArticles()
+  }, [mounted])
 
   useEffect(() => {
     filterAndSortArticles()
@@ -124,6 +130,11 @@ export default function LibraryPage() {
     if (score >= 80) return "bg-green-500"
     if (score >= 60) return "bg-yellow-500"
     return "bg-red-500"
+  }
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return null
   }
 
   return (
