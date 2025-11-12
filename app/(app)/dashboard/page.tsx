@@ -28,6 +28,7 @@ import { fadeInUp } from "@/lib/animations"
 
 export default function Page(){
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const [authed,setAuthed]=useState(false)
   const [loading,setLoading]=useState(true)
   const [profile,setProfile]=useState<any>(null)
@@ -35,7 +36,14 @@ export default function Page(){
   const [err,setErr]=useState<string|null>(null)
   const [upgradeSuccess, setUpgradeSuccess] = useState(false)
 
+  // Handle mounting
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   useEffect(()=>{
+    if (!mounted) return
+
     captureTokensFromURL()
     const a=isAuthed()
     setAuthed(a)
@@ -50,7 +58,7 @@ export default function Page(){
         window.history.replaceState({}, '', '/dashboard')
       }
     }
-  },[])
+  },[mounted])
 
   async function refreshProfile() {
     if (!authed) return
@@ -108,6 +116,11 @@ export default function Page(){
     }catch(e:any){
       alert(e?.message||'Portal failed')
     }
+  }
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return null
   }
 
   if(loading) {
