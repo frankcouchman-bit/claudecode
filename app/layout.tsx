@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { ReactNode } from "react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { QuotaProvider } from "@/contexts/quota-context"
+import { ClientProviders } from "@/components/client-providers"
 import { ClientQuotaDisplay } from "@/components/client-quota-display"
 
 export const metadata: Metadata = {
@@ -15,12 +15,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <QuotaProvider>
+        <ClientProviders>
           <Header />
           <ClientQuotaDisplay />
           <main className="min-h-[70vh]">{children}</main>
           <Footer />
-        </QuotaProvider>
+        </ClientProviders>
       </body>
     </html>
   )
