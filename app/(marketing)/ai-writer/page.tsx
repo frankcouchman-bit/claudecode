@@ -100,7 +100,8 @@ export default function Page() {
     },
     {
       question: "What's the difference between free and pro plans?",
-      answer: "Free plan includes 1 article per week with AI-generated hero images and basic features. Pro plan ($24/mo) offers 15 articles per day, advanced AI models, priority support, team features, and API access."
+      answer:
+        "Free plan includes 1 article per week with AI-generated hero images and basic features, plus 1 SEO tool use per week. Pro plan ($24/mo) offers 10 articles per day and 5 tool uses per day, advanced AI models, priority support, team features and API access."
     }
   ]
 

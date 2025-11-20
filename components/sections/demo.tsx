@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { generateDraft } from "@/lib/api"
+import { generateDraft, saveArticle } from "@/lib/api"
 import { ArticlePreview } from "@/components/article-preview"
 import { useQuota } from "@/contexts/quota-context"
 import {
@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -35,10 +36,32 @@ export default function Demo() {
   const [topic, setTopic] = useState("")
   const [language, setLanguage] = useState("en")
   const [tone, setTone] = useState("professional")
+  // Optional brief/instructions to guide the AI.  Users can add additional
+  // context or promotional copy here.  This will be sent to the backend
+  // when generating the draft.
+  const [brief, setBrief] = useState("")
+  // Word count selection.  Options are determined by plan: demo/guest users can
+  // choose only 1500 words; free plan users up to 2000; pro users up to 3000.
   const [wordCount, setWordCount] = useState("3000")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Determine allowed word count options based on quota and plan
+  const isProPlan = isAuthenticated && quota.plan === 'pro'
+  const wordOptions = isAuthenticated
+    ? isProPlan
+      ? ["1500", "2000", "2500", "3000"]
+      : ["1500", "2000"]
+    : ["1500"]
+
+  // Ensure selected word count remains within allowed options when quota changes
+  useEffect(() => {
+    if (!wordOptions.includes(wordCount)) {
+      setWordCount(wordOptions[wordOptions.length - 1])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quota, isAuthenticated])
 
   async function run() {
     if (!topic.trim()) {
@@ -56,25 +79,25 @@ export default function Demo() {
 
     setError(null)
     setLoading(true)
-    try {
-      console.log('Generating article with payload:', {
-        topic: topic.trim(),
-        tone,
-        language,
-        target_word_count: parseInt(wordCount) || 3000
-      })
 
-      const r = await generateDraft({
-        topic: topic.trim(),
-        tone: tone,
-        language: language,
-        target_word_count: parseInt(wordCount) || 3000,
-        research: true,
-        generate_social: true,
-        generate_image: true,
-        generate_faqs: true
-      })
+    // Build the base payload for generation
+    const requestedWordCount = parseInt(wordCount) || 2500
+    // Include optional brief when provided.  Unknown fields will be
+    // ignored by the backend but allow users to customise content.
+    const basePayload = {
+      topic: topic.trim(),
+      tone: tone,
+      language: language,
+      target_word_count: requestedWordCount,
+      research: true,
+      generate_social: true,
+      generate_image: true,
+      generate_faqs: true,
+      ...(brief.trim() ? { brief: brief.trim() } : {})
+    }
 
+    // Helper to handle successful generation: updates quota, saves article
+    async function handleSuccess(r: any) {
       console.log('Generation successful:', r)
 
       // Record successful generation and update global state
@@ -87,9 +110,61 @@ export default function Demo() {
       }
 
       setResult(r)
+
+      // Automatically save articles to the library for signed in users
+      if (isAuthenticated) {
+        try {
+      await saveArticle({
+        // Persist all relevant fields to the backend.  Use a fallback for the
+        // hero image because the Cloudflare worker may return the image
+        // nested under an `image` object instead of directly on the root.
+        title: r.title,
+        content: r.html || r.markdown,
+        markdown: r.markdown,
+        html: r.html,
+        meta_title: r.meta_title,
+        meta_description: r.meta_description,
+        meta_keywords: r.meta_keywords || r.keywords,
+        seo_score: r.seo_score,
+        readability_score: r.readability_score,
+        word_count: r.word_count,
+        image_url: r.image_url || (r.image && (r.image.image_url || r.image.image_b64)) || undefined,
+        citations: r.citations,
+        faqs: r.faqs,
+        social_posts: r.social_posts,
+        keywords: r.keywords,
+        internal_links: r.internal_links,
+      })
+        } catch (saveErr) {
+          console.error('Auto-save failed:', saveErr)
+        }
+      }
+    }
+
+    try {
+      console.log('Generating article with payload:', basePayload)
+      const r = await generateDraft(basePayload)
+      await handleSuccess(r)
     } catch (e: any) {
       console.error('Generation failed:', e)
-      const errorMessage = e?.message || "Failed to generate"
+      let errorMessage = e?.message || "Failed to generate"
+      // If the backend returns a 404 ("Not found"), retry with a default word
+      // count of 3000.  Some deployments only allow certain word count
+      // parameters and will return 404 for others.  Fallback to 3000 to
+      // maintain functionality without user intervention.
+      const messageStr = errorMessage.toLowerCase()
+      if (messageStr.includes('not found')) {
+        try {
+          const fallbackPayload = { ...basePayload, target_word_count: 3000 }
+          console.warn('Retrying generation with fallback payload:', fallbackPayload)
+          const fallbackResult = await generateDraft(fallbackPayload)
+          await handleSuccess(fallbackResult)
+          return
+        } catch (fallbackErr: any) {
+          console.error('Fallback generation failed:', fallbackErr)
+          errorMessage = fallbackErr?.message || errorMessage
+        }
+      }
       setError(`Error: ${errorMessage}. Check browser console for details.`)
     } finally {
       setLoading(false)
@@ -170,13 +245,22 @@ export default function Demo() {
                   <SelectValue placeholder="Word Count" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2000">2,000 words</SelectItem>
-                  <SelectItem value="3000">3,000 words</SelectItem>
-                  <SelectItem value="4000">4,000 words</SelectItem>
-                  <SelectItem value="5000">5,000 words</SelectItem>
-                  <SelectItem value="6000">6,000 words</SelectItem>
+                  {wordOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {Number(option).toLocaleString()} words{option === '2500' && isProPlan ? ' (recommended)' : ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
+              {/* Optional brief/instructions */}
+              <Textarea
+                placeholder="Brief / extra instructions (optional)"
+                value={brief}
+                onChange={e => setBrief(e.target.value)}
+                disabled={loading}
+                className="sm:col-span-2 min-h-[80px] resize-none"
+              />
 
               <Button
                 onClick={run}

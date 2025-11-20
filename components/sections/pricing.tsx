@@ -32,7 +32,7 @@ export function Pricing() {
       period: "per month",
       description: "Everything you need to dominate SERPs",
       features: [
-        "15 articles per day",
+        "10 articles per day",
         "AI-generated hero images",
         "Advanced SERP research",
         "Auto citations & FAQs",

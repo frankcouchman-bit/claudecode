@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import Demo from '@/components/sections/demo'
 import {
   FileText,
   TrendingUp,
@@ -21,6 +22,8 @@ import {
   Edit,
   Clock,
   CheckCircle2
+  ,
+  Sparkles
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -35,11 +38,17 @@ export default function Page(){
   const [err,setErr]=useState<string|null>(null)
   const [upgradeSuccess, setUpgradeSuccess] = useState(false)
 
-  useEffect(()=>{
+  useEffect(() => {
+    // Capture tokens in case the user has just returned from an auth
+    // callback.  This stores any access token in localStorage.
     captureTokensFromURL()
-    const a=isAuthed()
+    const a = isAuthed()
     setAuthed(a)
-    if(!a){ setLoading(false) }
+    // If the token is invalid, clear it so the user can sign in again.
+    if (!a) {
+      clearTokens()
+      setLoading(false)
+    }
 
     // Check for upgrade success
     if (typeof window !== 'undefined') {
@@ -70,7 +79,9 @@ export default function Page(){
         const p=await getProfile()
         setProfile(p)
         const rows=await listArticles()
-        setArticles(rows||[])
+        // Normalize the articles to always be an array
+        const normalized = Array.isArray(rows) ? rows : ((rows as any)?.articles ?? [])
+        setArticles(normalized)
       }catch(e:any){
         setErr(e?.message||'Failed')
       } finally{
@@ -151,15 +162,17 @@ export default function Page(){
       </div>
     )
   }
-
   const isPro = profile?.plan === 'pro'
   const todayGens = profile?.usage?.today?.generations ?? 0
   const monthGens = profile?.usage?.month?.generations ?? 0
   const toolsToday = profile?.tools_today ?? 0
   const toolLimit = profile?.tool_limit_daily ?? 0
 
+  // Always work with an array for articles
+  const articlesArray = Array.isArray(articles) ? articles : []
+
   // Get recent articles (last 5)
-  const recentArticles = [...articles]
+  const recentArticles = [...articlesArray]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
 
@@ -171,6 +184,15 @@ export default function Page(){
 
   return (
     <div className="container py-10 space-y-8">
+      {/* Article Generator for authenticated users */}
+      {profile && (
+        <div className="mb-10">
+          <h2 className="text-3xl font-bold mb-4">New Article</h2>
+          <p className="text-muted-foreground mb-6">Generate a new long‑form article directly from your dashboard.</p>
+          {/* Demo component handles topic input, word count selection and quota enforcement */}
+          <Demo />
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -205,7 +227,7 @@ export default function Page(){
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
           <div>
             <p className="font-semibold">Welcome to Pro!</p>
-            <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 15 articles per day, 10 tools per day, and unlimited revisions.</p>
+            <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 10 articles per day, 5 tools per day, and unlimited revisions.</p>
           </div>
         </motion.div>
       )}
@@ -217,7 +239,7 @@ export default function Page(){
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -240,6 +262,29 @@ export default function Page(){
           </CardContent>
         </Card>
 
+        {/* Tools Quick Access Card */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              SEO Tools
+            </CardTitle>
+            <Sparkles className="h-5 w-5 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Optimize</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Improve your content
+            </p>
+            <Button
+              size="sm"
+              className="mt-4 w-full gradient-btn text-white"
+              onClick={() => router.push('/tools')}
+            >
+              Go to Tools
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -248,7 +293,7 @@ export default function Page(){
             <FileText className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{articles.length}</div>
+          <div className="text-2xl font-bold">{articlesArray.length}</div>
             <div className="flex items-center gap-1 text-xs text-green-500 mt-1">
               <TrendingUp className="h-3 w-3" />
               <span>Total articles</span>
@@ -267,16 +312,16 @@ export default function Page(){
             <div className="text-2xl font-bold">
               {todayGens}
               {!isPro && <span className="text-sm text-muted-foreground ml-2">/ 1 daily</span>}
-              {isPro && <span className="text-sm text-muted-foreground ml-2">/ 15 daily</span>}
+              {isPro && <span className="text-sm text-muted-foreground ml-2">/ 10 daily</span>}
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mt-2">
               <div
                 className="bg-gradient-to-r from-purple-600 to-blue-600 h-1.5 rounded-full transition-all"
-                style={{ width: `${isPro ? Math.min((todayGens / 15) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
+                style={{ width: `${isPro ? Math.min((todayGens / 10) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {isPro ? `${15 - todayGens} articles left today` : `Resets daily • 7 per month limit`}
+              {isPro ? `${10 - todayGens} articles left today` : 'Resets weekly on Monday'}
             </p>
           </CardContent>
         </Card>
@@ -298,7 +343,7 @@ export default function Page(){
       </div>
 
       {/* Recent Articles */}
-      {articles.length > 0 && (
+        {articlesArray.length > 0 && (
         <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -377,7 +422,7 @@ export default function Page(){
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {articles.length === 0 ? (
+          {articlesArray.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No articles yet</h3>
@@ -404,7 +449,7 @@ export default function Page(){
                   </tr>
                 </thead>
                 <tbody>
-                  {articles.map((article:any) => (
+                  {articlesArray.map((article:any) => (
                     <tr
                       key={article.id}
                       className="border-b hover:bg-muted/50 transition-colors cursor-pointer"

@@ -55,7 +55,9 @@ export default function LibraryPage() {
     setError(null)
     try {
       const data = await listArticles()
-      setArticles(data || [])
+      // Normalize the returned data to always be an array
+      const normalized = Array.isArray(data) ? data : ((data as any)?.articles ?? [])
+      setArticles(normalized)
     } catch (e: any) {
       setError(e?.message || "Failed to load articles")
     } finally {

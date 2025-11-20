@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useQuota } from "@/contexts/quota-context"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { getArticle, deleteArticle, generateDraft, updateArticle } from "@/lib/api"
@@ -30,12 +31,26 @@ export default function ArticleViewPage() {
   const params = useParams()
   const id = params.id as string
 
+  const { quota, isAuthenticated } = useQuota()
   const [article, setArticle] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false)
-  const [targetWordCount, setTargetWordCount] = useState("3000")
+  // Default to 3000 which the backend is known to support.  Smaller
+  // selections will be attempted first but a fallback to 3000 is used on
+  // failures (see handleRegenerate).
+  // Determine allowed word count options based on plan.  Guests can expand up to 1.5k words,
+  // free users up to 2k words, and pro users up to 3.5k words.  Provide intermediate
+  // increments for pro users.  Default to the highest allowed option for the plan.
+  const plan = isAuthenticated ? quota.plan : 'guest'
+  const wordOptions =
+    plan === 'pro'
+      ? ['1500', '2000', '2500', '3000']
+      : plan === 'free'
+      ? ['1500', '2000']
+      : ['1500']
+  const [targetWordCount, setTargetWordCount] = useState(wordOptions[wordOptions.length - 1])
 
   useEffect(() => {
     if (id) {
@@ -75,7 +90,7 @@ export default function ArticleViewPage() {
     if (!article) return
 
     const currentWordCount = article.word_count || 0
-    const targetWords = parseInt(targetWordCount) || 3000
+    const targetWords = parseInt(targetWordCount) || 2500
 
     // If target is same or less than current, warn user
     if (targetWords <= currentWordCount) {
@@ -92,8 +107,8 @@ export default function ArticleViewPage() {
       const existingContent = article.markdown || article.html || article.content || ""
       const existingHeadings = extractHeadings(existingContent)
 
-      // Expand existing article with new content
-      const expandedArticle = await generateDraft({
+      // Build the base payload for expansion
+      const basePayload = {
         topic: article.title || article.topic,
         tone: article.tone || "professional",
         language: article.language || "en",
@@ -102,36 +117,57 @@ export default function ArticleViewPage() {
         generate_social: true,
         generate_image: true,
         generate_faqs: true,
-        // Include existing content so AI can expand it naturally
         existing_content: existingContent,
         existing_headings: existingHeadings,
         expansion_mode: true,
         expansion_instructions: `Expand the existing article from ${currentWordCount} words to approximately ${targetWords} words. Add new sections, headings, and detailed content that naturally flows from the existing content. Include additional research, examples, case studies, and deeper explanations. Maintain consistency in tone and style with the existing content.`
-      })
+      }
 
-      // Merge expanded content with existing metadata
-      await updateArticle(id, {
-        title: expandedArticle.title || article.title,
-        content: expandedArticle.content,
-        markdown: expandedArticle.markdown,
-        html: expandedArticle.html,
-        word_count: expandedArticle.word_count || targetWords,
-        meta_title: expandedArticle.meta_title || article.meta_title,
-        meta_description: expandedArticle.meta_description || article.meta_description,
-        keywords: expandedArticle.keywords || article.keywords,
-        citations: [...(article.citations || []), ...(expandedArticle.citations || [])],
-        internal_links: [...(article.internal_links || []), ...(expandedArticle.internal_links || [])],
-        faqs: [...(article.faqs || []), ...(expandedArticle.faqs || [])],
-        seo_score: expandedArticle.seo_score || article.seo_score,
-        updated_at: new Date().toISOString()
-      })
+      // Helper to apply expanded article and update state
+      const applyExpandedArticle = async (expandedArticle: any) => {
+        // Merge expanded content with existing metadata
+        await updateArticle(id, {
+          title: expandedArticle.title || article.title,
+          content: expandedArticle.content,
+          markdown: expandedArticle.markdown,
+          html: expandedArticle.html,
+          word_count: expandedArticle.word_count || targetWords,
+          meta_title: expandedArticle.meta_title || article.meta_title,
+          meta_description: expandedArticle.meta_description || article.meta_description,
+          keywords: expandedArticle.keywords || article.keywords,
+          citations: [...(article.citations || []), ...(expandedArticle.citations || [])],
+          internal_links: [...(article.internal_links || []), ...(expandedArticle.internal_links || [])],
+          faqs: [...(article.faqs || []), ...(expandedArticle.faqs || [])],
+          seo_score: expandedArticle.seo_score || article.seo_score,
+          updated_at: new Date().toISOString()
+        })
 
-      // Reload article to show expanded content
-      await loadArticle()
+        // Reload article to show expanded content
+        await loadArticle()
 
-      alert(`✅ Article successfully expanded from ${currentWordCount} to ~${targetWords} words!`)
-    } catch (e: any) {
-      alert(e?.message || "Failed to expand article")
+        alert(`✅ Article successfully expanded from ${currentWordCount} to ~${targetWords} words!`)
+      }
+
+      try {
+        // Attempt expansion with requested word count
+        const expandedArticle = await generateDraft(basePayload)
+        await applyExpandedArticle(expandedArticle)
+      } catch (expErr: any) {
+        // If the backend rejects the target with a 404 (Not found), try 3000
+        const message = expErr?.message?.toLowerCase() || ''
+        if (message.includes('not found')) {
+          try {
+            const fallbackPayload = { ...basePayload, target_word_count: 3000 }
+            console.warn('Retrying expansion with fallback word count:', fallbackPayload.target_word_count)
+            const fallbackArticle = await generateDraft(fallbackPayload)
+            await applyExpandedArticle(fallbackArticle)
+          } catch (fallbackErr: any) {
+            alert(fallbackErr?.message || 'Failed to expand article')
+          }
+        } else {
+          alert(expErr?.message || 'Failed to expand article')
+        }
+      }
     } finally {
       setRegenerating(false)
     }
@@ -270,11 +306,12 @@ export default function ArticleViewPage() {
                           <SelectValue placeholder="Select word count" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="2000">2,000 words</SelectItem>
-                          <SelectItem value="3000">3,000 words (recommended)</SelectItem>
-                          <SelectItem value="4000">4,000 words</SelectItem>
-                          <SelectItem value="5000">5,000 words</SelectItem>
-                          <SelectItem value="6000">6,000 words</SelectItem>
+                          {wordOptions.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {parseInt(opt).toLocaleString()} words
+                              {opt === '2500' && plan === 'pro' ? ' (recommended)' : ''}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground mt-2">
@@ -404,7 +441,7 @@ export default function ArticleViewPage() {
                     <p className="text-gray-600 mt-1">{article.meta_description}</p>
                   </div>
                 )}
-                {article.keywords && article.keywords.length > 0 && (
+                {Array.isArray(article.keywords) && article.keywords.length > 0 && (
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Keywords</label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -430,7 +467,7 @@ export default function ArticleViewPage() {
             <CardContent>
               {article.html ? (
                 <div
-                  className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-purple-600 prose-strong:text-gray-900"
+                  className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-headings:font-bold prose-p:text-gray-700 prose-a:text-purple-600 prose-strong:text-gray-900"
                   dangerouslySetInnerHTML={{ __html: article.html }}
                 />
               ) : article.markdown ? (
@@ -449,7 +486,7 @@ export default function ArticleViewPage() {
         </motion.div>
 
         {/* Internal Links */}
-        {article.internal_links && article.internal_links.length > 0 && (
+        {Array.isArray(article.internal_links) && article.internal_links.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
@@ -484,7 +521,7 @@ export default function ArticleViewPage() {
         )}
 
         {/* Citations */}
-        {article.citations && article.citations.length > 0 && (
+        {Array.isArray(article.citations) && article.citations.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
@@ -520,7 +557,7 @@ export default function ArticleViewPage() {
         )}
 
         {/* FAQs */}
-        {article.faqs && article.faqs.length > 0 && (
+        {Array.isArray(article.faqs) && article.faqs.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
@@ -553,7 +590,7 @@ export default function ArticleViewPage() {
         )}
 
         {/* Social Posts */}
-        {article.social_posts && article.social_posts.length > 0 && (
+        {Array.isArray(article.social_posts) && article.social_posts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >

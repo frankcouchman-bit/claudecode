@@ -30,11 +30,13 @@ const faqs: FAQItem[] = [
   },
   {
     question: "What's included in the Free plan?",
-    answer: "The Free plan gives you 1 complete article per week (not just 10,000 words—a full article with all SEO features). You also get 1 SEO tool usage per day (headline generator, meta tag optimizer, readability analyzer, etc.). No credit card required. It's perfect for bloggers, freelancers, or anyone who wants to test the quality before upgrading. Free users get the same quality as Pro—just with usage limits."
+    answer:
+      "The Free plan gives you 1 complete article per week (not just 10,000 words—a full article with all SEO features). You also get 1 SEO tool usage per week (headline generator, meta tag optimizer, readability analyzer, etc.). No credit card required. It's perfect for bloggers, freelancers or anyone who wants to test the quality before upgrading. Free users receive the same quality as Pro—just with stricter usage limits."
   },
   {
     question: "What's the difference between Free and Pro plans?",
-    answer: "Free plan: 1 article/week + 1 tool/day. Pro plan ($24/month): 15 articles/day (450/month) + 10 tools/day + unlimited revisions + priority generation + saved article library + bulk export. Pro is designed for agencies, content teams, and serious marketers who need to scale content production. Both plans get the same AI quality, SERP research, and full SEO optimization."
+    answer:
+      "Free plan: 1 article/week + 1 tool/week. Pro plan ($24/month): 10 articles/day (up to 300/month) + 5 tools/day + unlimited revisions + priority generation + saved article library + bulk export. Pro is designed for agencies, content teams and serious marketers who need to scale content production. Both plans deliver the same AI quality, SERP research and full SEO optimization—only the usage limits differ."
   },
   {
     question: "Can I edit the articles after they're generated?",
