@@ -141,26 +141,17 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
     setSaving(true)
     try {
-        const response = await saveArticle({
-        title: result.title,
-        topic: result.topic || result.title,
-        content: result.html || result.markdown,
-        markdown: result.markdown,
-        html: result.html,
-        meta_title: result.meta_title,
-        meta_description: result.meta_description,
-                meta_keywords: Array.isArray(result.meta_keywords) ? result.meta_keywords : Array.isArray(result.keywords) ? result.keywords : [],
-        seo_score: result.seo_score,
-        readability_score: result.readability_score,
-        word_count: result.word_count,
-        // Use nested image object if present
-        image_url: result.image_url || (result.image && result.image.image_url) || (result.image && result.image.image_b64),
-        citations: Array.isArray(result.citations) ? result.citations : [],
-        faqs: Array.isArray(result.faqs) ? result.faqs : [],
-        social_posts: result.social_posts || {},
-        keywords: Array.isArray(result.keywords) ? result.keywords : [],
-        internal_links: Array.isArray(result.internal_links) ? result.internal_links : []
-      })
+      const wordCount = Number(result.word_count) || 0
+      const payload = {
+        title: result.title || "Untitled",
+        data: result,
+        word_count: wordCount,
+        reading_time_minutes: Math.max(1, Math.round(wordCount / 220)),
+        status: result.status || "draft",
+        seo_score: result.seo_score ?? null,
+      }
+
+      await saveArticle(payload)
 
       setSaved(true)
       setTimeout(() => {

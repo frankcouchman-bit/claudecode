@@ -77,13 +77,20 @@ export default function ArticleEditPage() {
         .map(k => k.trim())
         .filter(k => k.length > 0)
 
+      const wordCount = content.trim().split(/\s+/).filter(Boolean).length
       await updateArticle(id, {
         title: title.trim(),
-        content: content.trim(),
-        markdown: content.trim(),
-        meta_title: metaTitle.trim() || title.trim(),
-        meta_description: metaDescription.trim(),
-        keywords: keywordsArray,
+        data: {
+          title: title.trim(),
+          markdown: content.trim(),
+          html: content.trim(),
+          meta_title: metaTitle.trim() || title.trim(),
+          meta_description: metaDescription.trim(),
+          keywords: keywordsArray,
+        },
+        word_count: wordCount,
+        reading_time_minutes: Math.max(1, Math.round(wordCount / 220)),
+        seo_score: null,
         updated_at: new Date().toISOString()
       })
 

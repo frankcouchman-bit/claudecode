@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { generateDraft, saveArticle } from "@/lib/api"
+import { expandDraft, generateDraft, saveArticle } from "@/lib/api"
 import { ensureHtml, sanitizeHtml } from "@/lib/sanitize-html"
 import { ArticlePreview } from "@/components/article-preview"
 import { useQuota } from "@/contexts/quota-context"
 import {
   canGenerateArticle,
+  canUseTool,
   recordArticleGeneration,
+  recordToolUsage,
   getRemainingQuota
 } from "@/lib/quota-enforcement"
 import {
@@ -448,21 +450,25 @@ function DemoContent() {
 
   async function extendDraft() {
     if (!result) return
-    const target = parseInt(maxAllowedOption?.value || wordCount) || 3000
+    if (!isAuthenticated) {
+      setError("Sign in to extend drafts to your plan maximum.")
+      return
+    }
+
+    const { allowed, reason } = canUseTool(quota, isAuthenticated)
+    if (!allowed) {
+      setError(reason || "Extension limit reached. Upgrade for more daily runs.")
+      return
+    }
+
     setExtending(true)
     try {
-      const rawResult = await generateDraft({
-        topic: topic.trim() || result.title || "Article",
-        tone,
-        language,
-        target_word_count: target,
-        research: true,
-        generate_social: true,
-        generate_image: true,
-        generate_faqs: true,
-        site_url: siteUrl || undefined,
-        brief: (brief || "") + "\nExtend and enrich the existing draft while keeping headings intact.",
-        existing_content: result.markdown || result.html || "",
+      const rawResult = await expandDraft({
+        keyword: topic.trim() || result.title || "Article",
+        article_json: result,
+        article_id: result.article_id || undefined,
+        website_url: siteUrl || undefined,
+        region: language,
       })
 
       const normalized = normalizeDraftResult(rawResult, {
@@ -474,8 +480,15 @@ function DemoContent() {
         throw new Error("Could not extend this draft. Please try again.")
       }
 
+      // Record tool usage locally so the UI reflects backend enforcement.
+      const updatedQuota = recordToolUsage(quota)
+      updateQuota(updatedQuota)
+      setTimeout(() => syncWithBackend(), 500)
+
       setResult({
+        ...result,
         ...normalized,
+        article_id: rawResult?.article_id || result.article_id,
         markdown: [result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
         html: ensureHtml(normalized.html, normalized.markdown),
       })

@@ -128,7 +128,19 @@ export async function getArticle(id: string): Promise<NormalizedArticle>{
   return article
 }
 export async function saveArticle(payload: any){ const res = await fetch(`${API_BASE}/api/articles`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
-export async function updateArticle(id: string, payload: any){ const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"PUT", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
+export async function updateArticle(id: string, payload: any){
+  // The worker expects PATCH for partial updates; use it here to avoid 405 errors.
+  const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"PATCH", body: JSON.stringify(payload), cache:"no-store" }))
+  return handle(res)
+}
+
+export async function expandDraft(payload: any){
+  // Front-end expansion uses the dedicated /api/expand route so the backend can
+  // merge with existing drafts, enforce tool quotas, and auto-save when an
+  // article_id is provided.
+  const res = await fetch(`${API_BASE}/api/expand`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
+  return handle(res)
+}
 export async function deleteArticle(id: string){ const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"DELETE", cache:"no-store" })); return handle(res) }
 export async function createCheckout(successUrl?:string, cancelUrl?:string){ const res = await fetch(`${API_BASE}/api/stripe/create-checkout`, withAuthHeaders({ method:"POST", body: JSON.stringify({ successUrl, cancelUrl }) })); return handle(res) }
 export async function openPortal(returnUrl?:string){ const res = await fetch(`${API_BASE}/api/stripe/portal`, withAuthHeaders({ method:"POST", body: JSON.stringify({ returnUrl }) })); return handle(res) }

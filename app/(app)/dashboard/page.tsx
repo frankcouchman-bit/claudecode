@@ -276,7 +276,7 @@ export default function Page(){
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <div className="flex items-center justify-between">
               <span>Today</span>
-              <Badge variant="secondary">{todayGens} / {isPro ? 10 : 1}</Badge>
+              <Badge variant="secondary">{todayGens} / {isPro ? 15 : 1}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span>This month</span>
@@ -388,11 +388,11 @@ export default function Page(){
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>Free: 1 draft per week up to 2,000 words with internal links + meta data</span>
+              <span>Free: 1 draft per day (up to 2,000 words) with internal links + meta data</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>Pro: 10 drafts/day, 6,000-word max, and 5 daily tool runs</span>
+              <span>Pro: 15 drafts/day, 6,000-word max, and 10 daily tool runs</span>
             </div>
             <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground">
               The generator UI now locks and labels lengths you can’t use, so every article you create is “perfect” for your current access level.

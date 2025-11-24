@@ -110,18 +110,24 @@ export default function ArticleViewPage() {
       })
 
       // Merge expanded content with existing metadata
+      const mergedCitations = [...(article.citations || []), ...(expandedArticle.citations || [])]
+      const mergedLinks = [...(article.internal_links || []), ...(expandedArticle.internal_links || [])]
+      const mergedFaqs = [...(article.faqs || []), ...(expandedArticle.faqs || [])]
+      const combinedWordCount = expandedArticle.word_count || targetWords
+
       await updateArticle(id, {
         title: expandedArticle.title || article.title,
-        content: expandedArticle.content,
-        markdown: expandedArticle.markdown,
-        html: expandedArticle.html,
-        word_count: expandedArticle.word_count || targetWords,
+        data: {
+          ...article,
+          ...expandedArticle,
+          citations: mergedCitations,
+          internal_links: mergedLinks,
+          faqs: mergedFaqs,
+        },
+        word_count: combinedWordCount,
+        reading_time_minutes: Math.max(1, Math.round(combinedWordCount / 220)),
         meta_title: expandedArticle.meta_title || article.meta_title,
         meta_description: expandedArticle.meta_description || article.meta_description,
-        keywords: expandedArticle.keywords || article.keywords,
-        citations: [...(article.citations || []), ...(expandedArticle.citations || [])],
-        internal_links: [...(article.internal_links || []), ...(expandedArticle.internal_links || [])],
-        faqs: [...(article.faqs || []), ...(expandedArticle.faqs || [])],
         seo_score: expandedArticle.seo_score || article.seo_score,
         updated_at: new Date().toISOString()
       })
