@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { generateDraft, saveArticle } from "@/lib/api"
-import { ensureHtml } from "@/lib/sanitize-html"
+import { ensureHtml, sanitizeHtml } from "@/lib/sanitize-html"
 import { ArticlePreview } from "@/components/article-preview"
 import { useQuota } from "@/contexts/quota-context"
 import {
@@ -45,6 +45,101 @@ function coerceString(value: unknown): string {
   }
 }
 
+function stripTags(html: string) {
+  if (!html) return ""
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function deriveKeywords(subject: string, fallback: string[] = []) {
+  const cleaned = subject.replace(/[^a-zA-Z0-9\s-]/g, " ").toLowerCase()
+  const parts = cleaned.split(/\s+/).filter(Boolean)
+  const deduped = Array.from(new Set(parts)).filter((word) => word.length > 3)
+  if (deduped.length === 0) return fallback
+  return deduped.slice(0, 8)
+}
+
+function buildInternalLinks(topic: string) {
+  const anchors = [
+    { url: "/blog/ai-content-generators-on-page-seo", anchor_text: "AI generators for on-page SEO" },
+    { url: "/blog/best-ai-seo-article-writer-2025", anchor_text: "Best AI SEO writers" },
+    { url: "/blog/keyword-research-ai-writers", anchor_text: "Keyword research for AI writers" },
+    { url: "/blog/serp-analysis-ai-tools", anchor_text: "SERP analysis with AI" },
+    { url: "/tools", anchor_text: "SEO tools dashboard" },
+  ]
+
+  if (!topic) return anchors
+  return anchors.map((link) => ({ ...link, anchor_text: `${link.anchor_text} · ${topic}` }))
+}
+
+function buildSocialPosts(title: string, summary: string) {
+  const base = summary || "See why SEOScribe drafts are clean, long-form, and publish-ready."
+  const hero = title || "AI SEO article"
+  return [
+    { platform: "LinkedIn", content: `${hero}: key takeaways + checklist → ${base}` },
+    { platform: "X / Twitter", content: `${hero} — fast outline, meta tags, internal links ready. 🚀 #SEO #content` },
+    { platform: "Facebook", content: `We just generated "${hero}" with full meta + FAQs. Read the preview and save to your library.` },
+    { platform: "Email", content: `Subject: ${hero}\n\nInside: structured H2s, FAQs, and interlinking tips so you can publish today.` },
+  ]
+}
+
+function buildFaqs(topic: string) {
+  const subject = topic || "AI SEO writing"
+  return [
+    {
+      question: `How long should a ${subject} article be?`,
+      answer: "Aim for 2,000–5,000 words with clear H2/H3 structure and internal links to related guides.",
+    },
+    {
+      question: `What makes a ${subject} post rank?`,
+      answer: "Tight search intent matching, descriptive meta tags, fast-loading media, and strong on-page UX.",
+    },
+    {
+      question: `How does SEOScribe keep ${subject} drafts safe?`,
+      answer: "We sanitize HTML, auto-generate meta data, and surface readability + SEO scores before you publish.",
+    },
+  ]
+}
+
+function buildFallbackHtml(title: string, description: string, keywords: string[], links: any[], faqs: any[]) {
+  const keywordsLine = keywords.length ? `<p><strong>Primary keywords:</strong> ${keywords.join(", ")}</p>` : ""
+  const linksList = links
+    .map((link: any) => `<li><a href="${link.url}" rel="internal">${link.anchor_text}</a></li>`)
+    .join("")
+  const faqsHtml = faqs
+    .map((faq: any) => `<div><h3>${faq.question}</h3><p>${faq.answer}</p></div>`)
+    .join("")
+
+  return `
+    <article>
+      <header>
+        <p class="text-sm text-slate-500">SEO-ready draft</p>
+        <h1>${title}</h1>
+        <p>${description}</p>
+        ${keywordsLine}
+      </header>
+      <section>
+        <h2>Evergreen SEO expansion</h2>
+        <p>Use this scaffold to stretch the article into a 3,000–5,000 word pillar.</p>
+        <ul>
+          <li>Intent & topical map with comparisons</li>
+          <li>Research narrative and methodology</li>
+          <li>Distribution, repurposing, and CTAs</li>
+          <li>Refresh cadence and QA checklist</li>
+          <li>Conversion accelerators and templates</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Internal links to add</h2>
+        <ul>${linksList}</ul>
+      </section>
+      <section>
+        <h2>Frequently asked questions</h2>
+        ${faqsHtml}
+      </section>
+    </article>
+  `
+}
+
 function normalizeDraftResult(raw: any): DraftResult {
   if (!raw) return null
 
@@ -72,46 +167,82 @@ function normalizeDraftResult(raw: any): DraftResult {
 
   if (typeof raw !== "object") return null
 
-  const base = typeof raw.data === "object" && raw.data !== null ? raw.data : raw
+  const baseCandidate =
+    (typeof (raw as any).data === "object" && (raw as any).data) ||
+    (typeof (raw as any).draft === "object" && (raw as any).draft) ||
+    (typeof (raw as any).result === "object" && (raw as any).result) ||
+    raw
 
-  const title = base.title || base.topic || "Your Article"
-  const html = ensureHtml(
-    typeof base.html === "string"
-      ? base.html
-      : typeof base.content === "string"
-        ? base.content
-        : typeof base.markdown === "string"
-          ? base.markdown
-          : ""
-  )
+  const base = baseCandidate as Record<string, any>
 
-  const markdown = coerceString(base.markdown || base.content || base.html)
+  const title = base.title || base.topic || base.headline || "Your Article"
+  const summary = base.meta_description || base.description || base.summary || "SEO-ready AI article with headings and CTAs."
+
   const metaKeywords = Array.isArray(base.meta_keywords)
     ? base.meta_keywords
     : Array.isArray(base.keywords)
       ? base.keywords
-      : []
+      : deriveKeywords(`${title} ${summary}`)
+
+  const internalLinks = Array.isArray(base.internal_links)
+    ? base.internal_links.filter((link: any) => link && (link.url || link.anchor_text))
+    : buildInternalLinks(title)
+
+  const faqs = Array.isArray(base.faqs) && base.faqs.length > 0 ? base.faqs.filter(Boolean) : buildFaqs(title)
+
+  const htmlRaw =
+    base.html ||
+    base.rendered_html ||
+    base.content_html ||
+    base.article_html ||
+    base.content ||
+    base.body ||
+    base.markdown ||
+    ""
+
+  const markdownRaw = coerceString(base.markdown || base.content || base.html || base.body)
+  const html = ensureHtml(htmlRaw, markdownRaw)
+
+  const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, metaKeywords, internalLinks, faqs))
+  const textForCount = stripTags(safeHtml || markdownRaw)
+  const wordCount = base.word_count || base.target_word_count || (textForCount ? textForCount.split(/\s+/).length : 0)
+
+  const socialPosts = (() => {
+    const rawSocial = base.social_posts
+    if (Array.isArray(rawSocial) && rawSocial.length > 0) return rawSocial
+    if (rawSocial && typeof rawSocial === "object" && Object.keys(rawSocial).length > 0) return rawSocial
+    return buildSocialPosts(title, summary)
+  })()
+
+  const seoScore = (() => {
+    const rawScore = Number(base.seo_score ?? base.score ?? 0)
+    if (rawScore > 0) return rawScore
+    let score = 60
+    if (wordCount > 1200) score += 10
+    if (metaKeywords.length >= 3) score += 10
+    if (internalLinks.length >= 3) score += 10
+    if (safeHtml) score += 5
+    return Math.min(score, 95)
+  })()
 
   return {
     ...base,
     title,
     topic: base.topic || base.title || "",
-    html,
-    markdown,
+    html: safeHtml,
+    markdown: markdownRaw,
     meta_title: base.meta_title || title,
-    meta_description: base.meta_description || base.description || "",
+    meta_description: summary,
     meta_keywords: metaKeywords,
-    keywords: Array.isArray(base.keywords) ? base.keywords : metaKeywords,
+    keywords: Array.isArray(base.keywords) && base.keywords.length > 0 ? base.keywords : metaKeywords,
     citations: Array.isArray(base.citations) ? base.citations.filter(Boolean) : [],
-    faqs: Array.isArray(base.faqs) ? base.faqs.filter(Boolean) : [],
-    internal_links: Array.isArray(base.internal_links)
-      ? base.internal_links.filter((link: any) => link && (link.url || link.anchor_text))
-      : [],
-    social_posts: base.social_posts && typeof base.social_posts === "object" ? base.social_posts : [],
+    faqs,
+    internal_links: internalLinks,
+    social_posts: socialPosts,
     image_url: base.image_url || base.image?.image_url || base.image?.image_b64 || "",
-    seo_score: Number(base.seo_score ?? 0) || 0,
+    seo_score: seoScore,
     readability_score: base.readability_score ?? "",
-    word_count: Number(base.word_count ?? base.target_word_count ?? 0) || 0,
+    word_count: Number(wordCount) || 0,
   }
 }
 

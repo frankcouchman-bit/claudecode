@@ -151,6 +151,23 @@ export function BlogPostLayout({
         </aside>
       </div>
 
+      <div className="container pb-12">
+        <Card className="border-2 border-blue-100 dark:border-blue-900/40">
+          <CardContent className="p-6 space-y-3">
+            <h3 className="text-xl font-semibold">Continue your SEO journey</h3>
+            <p className="text-sm text-muted-foreground">These SEOScribe guides interlink with this article to lift topical authority and reader depth.</p>
+            <ul className="grid gap-2 md:grid-cols-2 text-sm text-primary">
+              <li><a className="hover:underline" href="/blog/ai-content-generators-on-page-seo">AI content generators for on-page SEO</a></li>
+              <li><a className="hover:underline" href="/blog/best-ai-seo-article-writer-2025">Best AI SEO article writers in 2025</a></li>
+              <li><a className="hover:underline" href="/blog/keyword-research-ai-writers">Keyword research strategies for AI writers</a></li>
+              <li><a className="hover:underline" href="/blog/serp-analysis-ai-tools">SERP analysis: how AI mirrors top results</a></li>
+              <li><a className="hover:underline" href="/tools">Open the SEO tools dashboard</a></li>
+              <li><a className="hover:underline" href="/article-writer">Generate a pillar article now</a></li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

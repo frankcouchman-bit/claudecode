@@ -86,6 +86,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     try {
         const response = await saveArticle({
         title: result.title,
+        topic: result.topic || result.title,
         content: result.html || result.markdown,
         markdown: result.markdown,
         html: result.html,

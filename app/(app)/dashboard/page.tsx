@@ -14,6 +14,7 @@ import {
   BarChart3,
   Calendar,
   Crown,
+  Sparkles,
   LogOut,
   CreditCard,
   ArrowUpRight,
@@ -219,6 +220,66 @@ export default function Page(){
 
       {/* Article Generator for authenticated users */}
       <Demo />
+
+      {/* Quick access to SEO tools */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="hover:shadow-lg transition-shadow border-2 border-blue-100 dark:border-blue-900/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Zap className="h-5 w-5 text-blue-500" />
+              SEO Tools
+            </CardTitle>
+            <CardDescription>Find keyword density, meta descriptions, and headlines without leaving the dashboard.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Link href="/tools" className="flex-1">
+                <Button className="w-full gradient-btn text-white">Open toolkit</Button>
+              </Link>
+              <Link href="/blog" className="flex-1">
+                <Button variant="outline" className="w-full">Blog guides</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-lg transition-shadow border-2 border-purple-100 dark:border-purple-900/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              Article Writer
+            </CardTitle>
+            <CardDescription>Jump straight to the writer with plan-aware word counts and image generation.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/article-writer" className="w-full block">
+              <Button className="w-full" variant="outline">Launch writer</Button>
+            </Link>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-lg transition-shadow border-2 border-green-100 dark:border-green-900/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <BarChart3 className="h-5 w-5 text-green-500" />
+              Usage overview
+            </CardTitle>
+            <CardDescription>Live counters refresh after each generation or save.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>Today</span>
+              <Badge variant="secondary">{todayGens} / {isPro ? 10 : 1}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>This month</span>
+              <Badge variant="secondary">{monthGens} generated</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Tools used today</span>
+              <Badge variant="secondary">{toolsToday} / {toolLimit}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
