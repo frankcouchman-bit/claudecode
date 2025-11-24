@@ -304,6 +304,58 @@ export default function Page(){
         </Card>
       </div>
 
+      {/* Plan entitlements + quality guardrails */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="border-2 border-purple-100 dark:border-purple-900/40">
+          <CardHeader>
+            <CardTitle className="text-xl">Your plan allowances</CardTitle>
+            <CardDescription>Word count ranges stay inside your plan limits automatically.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Demo/guest: single 1,200–1,500 word showcase draft</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Free: 1 draft per week up to 2,000 words with internal links + meta data</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Pro: 10 drafts/day, 6,000-word max, and 5 daily tool runs</span>
+            </div>
+            <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground">
+              The generator UI now locks and labels lengths you can’t use, so every article you create is “perfect” for your current access level.
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-green-100 dark:border-green-900/40">
+          <CardHeader>
+            <CardTitle className="text-xl">SEO quality guardrails</CardTitle>
+            <CardDescription>Front-end checks keep drafts consistent for publishing.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span>Structured headings and metadata carried into previews</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span>Internal link + keyword suggestions surfaced in the SEO tab</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span>Length guidance displayed beside the generator for every plan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span>Library cards show SEO scores, timestamps, and word counts at a glance</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Recent Articles */}
       {articles.length > 0 && (
         <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>

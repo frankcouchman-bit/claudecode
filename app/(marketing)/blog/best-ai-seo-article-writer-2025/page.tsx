@@ -1,6 +1,10 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { BlogPostLayout } from "@/components/blog/post-layout"
+import { SEOAppendix } from "@/components/blog/seo-appendix"
 
 export const metadata = {
   title: "Best AI SEO Article Writers for 2025 – Reviewed",
@@ -10,22 +14,37 @@ export const metadata = {
 
 export default function Page() {
   return (
-    <article className="container py-12 prose prose-lg max-w-3xl mx-auto prose-headings:font-bold prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-headings:gradient-text">
-      <h1>Best AI SEO Article Writers for 2025 – Reviewed</h1>
-      {/* Hero image for this article */}
-      <img
-        src="/blog/ai-seo-writer.jpg"
-        alt="AI SEO writer analysing SEO graphs"
-        className="w-full rounded-lg my-6"
-      />
-      <p>
-        The world of content marketing is evolving fast.  To stay competitive in 2025 and beyond,
-        businesses need scalable solutions that produce high‑quality articles at speed.  Enter
-        AI‑powered writing assistants.  These tools analyse search results, generate long‑form drafts
-        and even suggest internal links to keep readers engaged.  In this review, we explore why
-        AI writers matter for SEO, how to compare platforms and how SEOScribe stacks up against the
-        competition.
-      </p>
+    <BlogPostLayout
+      title="Best AI SEO Article Writers for 2025 – Reviewed"
+      description="Discover the top AI tools for SEO writers in 2025 and learn how to choose the right platform for your content marketing."
+      published="2025-01-15"
+      readTime="19 min read"
+      tags={["AI writing", "SEO", "Reviews"]}
+      heroImage="/blog/ai-seo-writer.jpg"
+    >
+      <article>
+        <p>
+          The world of content marketing is evolving fast.  To stay competitive in 2025 and beyond,
+          businesses need scalable solutions that produce high‑quality articles at speed.  Enter
+          AI‑powered writing assistants.  These tools analyse search results, generate long‑form drafts
+          and even suggest internal links to keep readers engaged.  In this review, we explore why
+          AI writers matter for SEO, how to compare platforms and how SEOScribe stacks up against the
+          competition.
+        </p>
+
+        <div className="grid gap-4 sm:grid-cols-2 my-8">
+          {["SERP-aware research", "Pillar-length drafts", "Internal link coach", "Export-ready HTML/MD"].map((item) => (
+            <Card key={item} className="border-2 border-purple-100 dark:border-purple-900/40">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">{item}</p>
+                  <p className="text-sm text-muted-foreground">Checked by SEOScribe so your post ships polished.</p>
+                </div>
+                <Badge variant="secondary" className="text-xs">2025</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
       <h2>Why AI Writers Matter for SEO</h2>
       <p>
@@ -49,6 +68,21 @@ export default function Page() {
         your CMS or WordPress with a click?  These practical considerations separate marketing
         gimmicks from professional‑grade software.
       </p>
+
+      <div className="grid md:grid-cols-3 gap-4 my-8">
+        {[
+          { label: "Depth", detail: "2k–6k words with SERP-aware headings" },
+          { label: "Quality", detail: "Citations, plagiarism checks, readability cues" },
+          { label: "Speed", detail: "Drafts in under 90 seconds with export-ready HTML" },
+        ].map((item) => (
+          <Card key={item.label} className="border-2 border-green-100 dark:border-green-900/40">
+            <CardContent className="p-4 space-y-1">
+              <p className="text-xs uppercase tracking-wide text-green-700 dark:text-green-200">{item.label}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{item.detail}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <h2>Top AI Writers Compared</h2>
       <p>
@@ -114,14 +148,27 @@ export default function Page() {
         strategy.
       </p>
 
-      <div className="my-12 p-8 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white text-center">
-        <p className="text-xl font-semibold mb-4">
-          Ready to generate your own SEO article?
-        </p>
-        <Link href="/article-writer">
-          <Button className="gradient-btn text-white">Try SEOScribe for Free</Button>
-        </Link>
-      </div>
+      <Card className="my-8 border-2 border-blue-100 dark:border-blue-900/40">
+        <CardContent className="p-6 space-y-3">
+          <div className="flex flex-wrap gap-2 text-xs uppercase tracking-wide text-blue-700 dark:text-blue-200">
+            <Badge variant="secondary">Plan-aware word counts</Badge>
+            <Badge variant="secondary">Demo, Free, Pro</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Demo users can safely stretch drafts to ~1,500 words; Free unlocks 2,000-word articles; Pro extends to 6,000-word
+            pillars with richer internal linking and media. The generator UI mirrors these guardrails so you never hit a client-side error while scaling up length.
+          </p>
+        </CardContent>
+      </Card>
+
+        <div className="my-12 p-8 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white text-center">
+          <p className="text-xl font-semibold mb-4">
+            Ready to generate your own SEO article?
+          </p>
+          <Link href="/article-writer">
+            <Button className="gradient-btn text-white">Try SEOScribe for Free</Button>
+          </Link>
+        </div>
       {/* Additional SEO best practices and linking advice */}
       <h2>Crafting Evergreen, High‑Ranking Articles</h2>
       <p>
@@ -179,17 +226,19 @@ export default function Page() {
       </p>
 
       {/* Conclusion section */}
-      <h2>Conclusion</h2>
-      <p>
-        AI‑powered writing tools are transforming SEO, but success still depends on strategy.  Focus on
-        producing long‑form, research‑driven content, incorporate internal links to build topic
-        clusters and always review AI drafts with a critical eye.  With SEOScribe, you can harness
-        AI to create comprehensive articles that rank, convert and provide real value to your
-        readers.  Ready to elevate your content?  Explore our other guides on
-        <Link href="/blog/meta-descriptions-ai">optimising meta tags</Link> and
-        <Link href="/blog/scaling-content-production-ai">scaling your content production</Link>, and
-        start writing today.
-      </p>
-    </article>
+        <h2>Conclusion</h2>
+        <p>
+          AI‑powered writing tools are transforming SEO, but success still depends on strategy.  Focus on
+          producing long‑form, research‑driven content, incorporate internal links to build topic
+          clusters and always review AI drafts with a critical eye.  With SEOScribe, you can harness
+          AI to create comprehensive articles that rank, convert and provide real value to your
+          readers.  Ready to elevate your content?  Explore our other guides on
+          <Link href="/blog/meta-descriptions-ai">optimising meta tags</Link> and
+          <Link href="/blog/scaling-content-production-ai">scaling your content production</Link>, and
+          start writing today.
+        </p>
+      </article>
+      <SEOAppendix topic="AI SEO article writers in 2025" />
+    </BlogPostLayout>
   )
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { saveArticle } from "@/lib/api"
+import { ensureHtml, sanitizeHtml } from "@/lib/sanitize-html"
 import { useQuota } from "@/contexts/quota-context"
 import { motion } from "framer-motion"
 import {
@@ -39,6 +40,25 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [activeTab, setActiveTab] = useState("preview")
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  const safeHtml = ensureHtml(result?.html, result?.content)
+  const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
+  const fallbackMarkdownHtml = sanitizeHtml(safeMarkdown)
+  const renderedHtml = safeHtml || fallbackMarkdownHtml
+
+  // Bail out early if the payload is missing or malformed instead of throwing.
+  if (!result || typeof result !== "object") {
+    return (
+      <Card className="border-2 border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="text-lg">Preview unavailable</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            We could not render the generated article because the response was incomplete. Please try generating again.
+          </p>
+        </CardHeader>
+      </Card>
+    )
+  }
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
@@ -234,16 +254,22 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
           )}
 
           <Card>
-            <CardContent className="p-8">
-              <div
-                className="prose prose-lg dark:prose-invert max-w-none
-                           prose-headings:font-bold prose-headings:gradient-text
-                           prose-p:text-muted-foreground prose-p:leading-relaxed
-                           prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                           prose-img:rounded-lg prose-img:shadow-md
-                           prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
-                dangerouslySetInnerHTML={{ __html: result?.html || "" }}
-              />
+            <CardContent className="p-8 space-y-4">
+              {renderedHtml ? (
+                <div
+                  className="prose prose-lg dark:prose-invert max-w-none
+                             prose-headings:font-bold prose-headings:gradient-text
+                             prose-p:text-muted-foreground prose-p:leading-relaxed
+                             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                             prose-img:rounded-lg prose-img:shadow-md
+                             prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
+                  dangerouslySetInnerHTML={{ __html: renderedHtml }}
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground bg-muted/30">
+                  No previewable HTML was returned. Try generating again or copy the markdown tab to continue editing.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
