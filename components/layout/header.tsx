@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,13 +8,36 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Menu, X, Sparkles, LogOut } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useQuota } from "@/contexts/quota-context"
-import { clearTokens } from "@/lib/auth"
+import { clearTokens, isAuthed } from "@/lib/auth"
+import { getProfile } from "@/lib/api"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const router = useRouter()
   const { isAuthenticated } = useQuota()
+  // Determine authentication from both quota state and raw token.  This
+  // fallback prevents the header from incorrectly showing "Sign Out" when
+  // the quota context hasn't been initialised yet but a token is present.
+  // Determine authentication solely by checking local tokens.  The quota
+  // state may lag behind when tokens are cleared, so we rely on isAuthed().
+  const authed = isAuthed()
+
+  // Store the authenticated user's email to personalise the header.  We
+  // fetch the profile when the user is authenticated.  If no email is
+  // available the name remains empty and the header simply shows "Account".
+  const [userEmail, setUserEmail] = useState<string>("")
+  useEffect(() => {
+    if (authed) {
+      getProfile().then((profile: any) => {
+        if (profile?.email) setUserEmail(profile.email)
+      }).catch(() => {
+        // ignore profile fetch errors
+      })
+    } else {
+      setUserEmail("")
+    }
+  }, [authed])
 
   // Navigation items visible to all users
   const navItems = [
@@ -24,7 +47,7 @@ export function Header() {
     { href: "/pricing", label: "Pricing" },
     { href: "/blog", label: "Blog" },
     // Show dashboard link only if signed in
-    ...(isAuthenticated ? [{ href: "/dashboard", label: "Dashboard" }] : [])
+    ...(authed ? [{ href: "/dashboard", label: "Dashboard" }] : [])
   ]
 
   return (
@@ -56,7 +79,7 @@ export function Header() {
         <div className="hidden md:flex items-center gap-3">
           <ThemeToggle />
           {/* Show Try Demo only when not authenticated */}
-          {!isAuthenticated && (
+          {!authed && (
             <Link href="/article-writer">
               <Button variant="outline" className="hover:border-primary">
                 Try Demo
@@ -64,7 +87,7 @@ export function Header() {
             </Link>
           )}
           {/* Show sign in or sign out accordingly */}
-          {isAuthenticated ? (
+          {authed ? (
             <Button
               variant="outline"
               onClick={() => {
@@ -73,7 +96,7 @@ export function Header() {
               }}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+              {userEmail ? userEmail.split('@')[0] : 'Account'} (Sign Out)
             </Button>
           ) : (
             <Link href="/auth">

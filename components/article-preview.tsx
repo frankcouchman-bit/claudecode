@@ -341,32 +341,43 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {result?.social_posts && result.social_posts.length > 0 ? (
-                result.social_posts.map((post: any, i: number) => (
-                  <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="capitalize">
-                        <Globe className="w-3 h-3 mr-1" />
-                        {post.platform || 'General'}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(post.content, `social-${i}`)}
-                      >
-                        {copied === `social-${i}` ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+              {(() => {
+                // Convert social_posts to an array of objects.  The API may return
+                // either an array or a map keyed by platform.  We normalise
+                // everything to an array with `platform` and `content` fields.
+                let postsArray: { platform: string; content: string }[] = []
+                const sp = result?.social_posts
+                if (Array.isArray(sp)) {
+                  postsArray = sp as any
+                } else if (sp && typeof sp === 'object') {
+                  postsArray = Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
+                }
+                if (postsArray.length > 0) {
+                  return postsArray.map((post: any, i: number) => (
+                    <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="capitalize">
+                          <Globe className="w-3 h-3 mr-1" />
+                          {post.platform || 'General'}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(post.content, `social-${i}`)}
+                        >
+                          {copied === `social-${i}` ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-sm">{post.content}</p>
                     </div>
-                    <p className="text-sm">{post.content}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No social posts generated</p>
-              )}
+                  ))
+                }
+                return <p className="text-sm text-muted-foreground">No social posts generated</p>
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
