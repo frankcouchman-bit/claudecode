@@ -85,9 +85,42 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   }
 
   function copyToClipboard(text: string, label: string) {
-    navigator.clipboard.writeText(text)
-    setCopied(label)
-    setTimeout(() => setCopied(null), 2000)
+    const fallbackCopy = () => {
+      try {
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.setAttribute('readonly', '')
+        textarea.style.position = 'absolute'
+        textarea.style.left = '-9999px'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        setCopied(label)
+        setTimeout(() => setCopied(null), 2000)
+      } catch (error) {
+        console.error('Copy failed', error)
+        setCopied(null)
+      }
+    }
+
+    try {
+      if (!navigator?.clipboard?.writeText) {
+        fallbackCopy()
+        return
+      }
+
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          setCopied(label)
+          setTimeout(() => setCopied(null), 2000)
+        })
+        .catch(() => fallbackCopy())
+    } catch (error) {
+      console.error('Copy unavailable', error)
+      fallbackCopy()
+    }
   }
 
   function downloadFile(content: string, filename: string, type: string) {

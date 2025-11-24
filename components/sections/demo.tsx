@@ -220,10 +220,28 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
       : deriveKeywords(`${title} ${summary}`)
 
   const internalLinks = Array.isArray(base.internal_links)
-    ? base.internal_links.filter((link: any) => link && (link.url || link.anchor_text))
+    ? base.internal_links
+        .filter((link: any) => link && (link.url || link.anchor_text))
+        .map((link: any) => ({
+          url: coerceString(link.url || link.href).trim(),
+          anchor_text: coerceString(link.anchor_text || link.text || link.title).trim(),
+        }))
+        .filter((link) => link.url)
     : buildInternalLinks(title, context.siteUrl)
 
-  const faqs = Array.isArray(base.faqs) && base.faqs.length > 0 ? base.faqs.filter(Boolean) : buildFaqs(title)
+  const faqs = (() => {
+    const rawFaqs = Array.isArray(base.faqs) && base.faqs.length > 0 ? base.faqs.filter(Boolean) : buildFaqs(title)
+    const cleaned = rawFaqs
+      .map((faq: any) => {
+        const question = coerceString(faq?.question || faq?.q || faq?.title).trim()
+        const answer = coerceString(faq?.answer || faq?.a || faq?.content).trim()
+        if (!question || !answer) return null
+        return { question, answer }
+      })
+      .filter(Boolean)
+
+    return cleaned.length > 0 ? cleaned : buildFaqs(title)
+  })()
 
   const htmlRaw =
     base.html ||
@@ -238,7 +256,24 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
   const markdownRaw = coerceString(base.markdown || base.content || base.html || base.body)
   const html = ensureHtml(htmlRaw, markdownRaw)
 
-  const citations = Array.isArray(base.citations) ? base.citations.filter(Boolean) : buildCitations(metaKeywords, title)
+  const citations = (() => {
+    const raw = Array.isArray(base.citations) ? base.citations.filter(Boolean) : buildCitations(metaKeywords, title)
+    const cleaned = raw
+      .map((citation: any) => {
+        const url = coerceString(citation?.url).trim()
+        const titleText = coerceString(citation?.title || citation?.label || citation?.source).trim()
+        const description = coerceString(citation?.description || citation?.summary).trim()
+        if (!url && !titleText && !description) return null
+        return {
+          url: url || (titleText ? `https://www.google.com/search?q=${encodeURIComponent(titleText)}` : ""),
+          title: titleText || url || "Source",
+          description,
+        }
+      })
+      .filter(Boolean)
+
+    return cleaned.length > 0 ? cleaned : buildCitations(metaKeywords, title)
+  })()
 
   const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, metaKeywords, internalLinks, faqs, citations))
   const textForCount = stripTags(safeHtml || markdownRaw)
