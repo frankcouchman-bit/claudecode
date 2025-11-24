@@ -57,8 +57,8 @@ export default function Page() {
     },
     {
       icon: FileText,
-      title: "2,000-6,000 Word Articles",
-      description: "Long-form, comprehensive content that establishes authority"
+      title: "1,500-3,000 Word Articles",
+      description: "Long-form, comprehensive content that establishes authority within plan limits"
     },
     {
       icon: Image,
@@ -93,7 +93,7 @@ export default function Page() {
     },
     {
       question: "How long are the articles generated?",
-      answer: "Articles typically range from 2,000 to 6,000 words depending on your topic and target word count. You can specify your preferred length, and our AI will create comprehensive, in-depth content that thoroughly covers the subject."
+      answer: "Articles typically range from 1,500 to 3,000 words depending on your topic and target word count. You can specify your preferred length, and our AI will create comprehensive, in-depth content that thoroughly covers the subject while honoring your plan limits."
     },
     {
       question: "Is the content plagiarism-free?",
@@ -154,7 +154,7 @@ export default function Page() {
               transition={{ delay: 0.2 }}
               className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto"
             >
-              Create 2,000-6,000 word, SERP-optimized articles with citations, images, and perfect on-page SEO in under 60 seconds.
+              Create 1,500-3,000 word, SERP-optimized articles with citations, images, and perfect on-page SEO in under 60 seconds.
             </motion.p>
 
             <motion.div

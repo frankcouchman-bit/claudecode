@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useQuota } from "@/contexts/quota-context"
 import {
   ArrowLeft,
   Edit,
@@ -36,6 +37,14 @@ export default function ArticleViewPage() {
   const [regenerating, setRegenerating] = useState(false)
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false)
   const [targetWordCount, setTargetWordCount] = useState("3000")
+  const { quota } = useQuota()
+
+  useEffect(() => {
+    const cap = quota.plan === 'pro' ? 3000 : 2000
+    if ((parseInt(targetWordCount) || cap) > cap) {
+      setTargetWordCount(String(cap))
+    }
+  }, [quota.plan])
 
   useEffect(() => {
     if (id) {
@@ -75,7 +84,8 @@ export default function ArticleViewPage() {
     if (!article) return
 
     const currentWordCount = article.word_count || 0
-    const targetWords = parseInt(targetWordCount) || 3000
+    const planCap = quota.plan === 'pro' ? 3000 : 2000
+    const targetWords = Math.min(parseInt(targetWordCount) || planCap, planCap)
 
     // If target is same or less than current, warn user
     if (targetWords <= currentWordCount) {
@@ -276,11 +286,10 @@ export default function ArticleViewPage() {
                           <SelectValue placeholder="Select word count" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="2000">2,000 words</SelectItem>
-                          <SelectItem value="3000">3,000 words (recommended)</SelectItem>
-                          <SelectItem value="4000">4,000 words</SelectItem>
-                          <SelectItem value="5000">5,000 words</SelectItem>
-                          <SelectItem value="6000">6,000 words</SelectItem>
+                          <SelectItem value="1500">1,500 words</SelectItem>
+                          <SelectItem value="2000">2,000 words (Free max)</SelectItem>
+                          <SelectItem value="2500">2,500 words</SelectItem>
+                          <SelectItem value="3000">3,000 words (Pro max)</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground mt-2">
@@ -308,7 +317,7 @@ export default function ArticleViewPage() {
                         <strong>How it works:</strong> The AI will analyze your existing content and add new sections, headings, examples, and detailed explanations that naturally flow from what you already have.
                       </p>
                       <p className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                        <strong>Note:</strong> This counts as 1 article generation against your daily quota.
+                        <strong>Note:</strong> This counts as 1 article generation toward your weekly (free) or daily (pro) quota.
                       </p>
                     </div>
                   </div>

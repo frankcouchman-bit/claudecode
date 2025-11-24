@@ -6,9 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AnimatedProgress, AnimatedBadge } from "@/components/animated-counter"
-import { getQuota, getRemainingQuota, type QuotaLimits } from "@/lib/quota-enforcement"
+import { getQuota, type QuotaLimits } from "@/lib/quota-enforcement"
 import { Zap, Crown, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
+
+function getWeekKey(date: Date): string {
+  const target = new Date(date.valueOf())
+  const dayNr = (date.getUTCDay() + 6) % 7
+  target.setUTCDate(target.getUTCDate() - dayNr + 3)
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4))
+  const diff = target.valueOf() - firstThursday.valueOf()
+  const weekNumber = 1 + Math.round(diff / (7 * 24 * 3600 * 1000))
+  return `${target.getUTCFullYear()}-W${weekNumber}`
+}
 
 interface QuotaDisplayProps {
   isAuthenticated: boolean
@@ -24,7 +34,9 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
     setQuota(currentQuota)
 
     // Show upgrade prompt if free user is running low
-    if (isAuthenticated && currentQuota.plan === 'free' && currentQuota.todayGenerations >= 1) {
+    const weekKey = getWeekKey(new Date())
+    const usedThisWeek = currentQuota.lastWeekKey === weekKey ? currentQuota.weekGenerations || 0 : 0
+    if (isAuthenticated && currentQuota.plan === 'free' && usedThisWeek >= 1) {
       setShowUpgradePrompt(true)
     }
   }, [isAuthenticated])
@@ -32,8 +44,9 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
   if (!quota) return null
 
   const isPro = quota.plan === 'pro'
-  const articlesMax = isPro ? 15 : 1
-  const articlesUsed = quota.todayGenerations
+  const weekKey = getWeekKey(new Date())
+  const articlesMax = isPro ? 5 : (quota.articlesPerWeek || 1)
+  const articlesUsed = isPro ? quota.todayGenerations : (quota.lastWeekKey === weekKey ? quota.weekGenerations || 0 : 0)
   const articlesRemaining = articlesMax - articlesUsed
   const percentage = (articlesUsed / articlesMax) * 100
 
@@ -82,10 +95,10 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                 showLabel={false}
               />
               <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                <p>{isPro ? 'Resets daily at midnight' : 'Resets daily for free users'}</p>
+                <p>{isPro ? 'Resets daily at midnight' : 'Resets weekly (Sun → Mon)'}</p>
                 {!isPro && (
                   <p className="text-[11px]">
-                    {Math.max(0, 31 - quota.monthGenerations)} of 31 free monthly generations remaining
+                    {Math.max(0, (quota.articlesPerMonth || 4) - quota.monthGenerations)} of {quota.articlesPerMonth || 4} free monthly generations remaining
                   </p>
                 )}
               </div>
@@ -121,7 +134,7 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                 <ul className="text-xs space-y-1 mb-3">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    15 articles per day
+                    5 articles per day
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-green-500" />

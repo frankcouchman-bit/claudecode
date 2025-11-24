@@ -29,6 +29,16 @@ import { fadeInUp } from "@/lib/animations"
 import Demo from "@/components/sections/demo"
 import { useQuota } from "@/contexts/quota-context"
 
+function getWeekKey(date: Date): string {
+  const target = new Date(date.valueOf())
+  const dayNr = (date.getUTCDay() + 6) % 7
+  target.setUTCDate(target.getUTCDate() - dayNr + 3)
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4))
+  const diff = target.valueOf() - firstThursday.valueOf()
+  const weekNumber = 1 + Math.round(diff / (7 * 24 * 3600 * 1000))
+  return `${target.getUTCFullYear()}-W${weekNumber}`
+}
+
 export default function Page(){
   const router = useRouter()
   const { quota, refreshQuota, syncWithBackend } = useQuota()
@@ -168,6 +178,10 @@ export default function Page(){
   const monthGens = profile?.usage?.month?.generations ?? quota.monthGenerations ?? quota.todayGenerations
   const toolsToday = profile?.tool_usage_today ?? profile?.tools_today ?? quota.toolsToday ?? 0
   const toolLimit = isPro ? 10 : 1
+  const currentWeekKey = getWeekKey(new Date())
+  const weeklyGens = quota.lastWeekKey === currentWeekKey ? quota.weekGenerations || 0 : 0
+  const weeklyLimit = quota.articlesPerWeek || 1
+  const proDailyLimit = 5
 
   // Get recent articles (last 5)
   const recentArticles = [...articles]
@@ -216,7 +230,7 @@ export default function Page(){
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
           <div>
             <p className="font-semibold">Welcome to Pro!</p>
-              <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 15 articles per day, 10 tool calls per day, and unlimited revisions.</p>
+              <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 5 articles per day, 10 tool calls per day, and unlimited revisions.</p>
           </div>
         </motion.div>
       )}
@@ -273,15 +287,15 @@ export default function Page(){
             </CardTitle>
             <CardDescription>Live counters refresh after each generation or save.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center justify-between">
-              <span>Today</span>
-              <Badge variant="secondary">{todayGens} / {isPro ? 15 : 1}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>This month</span>
-              <Badge variant="secondary">{monthGens} generated</Badge>
-            </div>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center justify-between">
+              <span>{isPro ? 'Today' : 'This week'}</span>
+              <Badge variant="secondary">{isPro ? `${todayGens} / ${proDailyLimit}` : `${weeklyGens} / ${weeklyLimit}`}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>This month</span>
+                <Badge variant="secondary">{monthGens} generated</Badge>
+              </div>
             <div className="flex items-center justify-between">
               <span>Tools used today</span>
               <Badge variant="secondary">{toolsToday} / {toolLimit}</Badge>
@@ -333,27 +347,27 @@ export default function Page(){
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Today's Generations
+              {isPro ? "Today's Generations" : 'This Week'}
             </CardTitle>
             <Zap className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {todayGens}
+              {isPro ? todayGens : weeklyGens}
               {isPro ? (
-                <span className="text-sm text-muted-foreground ml-2">/ 15 daily</span>
+                <span className="text-sm text-muted-foreground ml-2">/ {proDailyLimit} daily</span>
               ) : (
-                <span className="text-sm text-muted-foreground ml-2">/ 1 daily</span>
+                <span className="text-sm text-muted-foreground ml-2">/ {weeklyLimit} weekly</span>
               )}
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mt-2">
               <div
                 className="bg-gradient-to-r from-purple-600 to-blue-600 h-1.5 rounded-full transition-all"
-                style={{ width: `${isPro ? Math.min((todayGens / 15) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
+                style={{ width: `${isPro ? Math.min((todayGens / proDailyLimit) * 100, 100) : Math.min((weeklyGens / weeklyLimit) * 100, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {isPro ? `${Math.max(15 - todayGens, 0)} articles left today` : `Resets daily`}
+              {isPro ? `${Math.max(proDailyLimit - todayGens, 0)} articles left today` : `${Math.max(weeklyLimit - weeklyGens, 0)} left this week`}
             </p>
           </CardContent>
         </Card>
@@ -388,11 +402,11 @@ export default function Page(){
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>Free: 1 draft per day (up to 2,000 words) with internal links + meta data</span>
+              <span>Free: 1 draft per week (up to 2,000 words) with internal links + meta data</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>Pro: 15 drafts/day, 6,000-word max, and 10 daily tool runs</span>
+              <span>Pro: 5 drafts/day, 3,000-word max, and 10 daily tool runs</span>
             </div>
             <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground">
               The generator UI now locks and labels lengths you can’t use, so every article you create is “perfect” for your current access level.

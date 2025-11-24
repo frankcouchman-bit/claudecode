@@ -57,6 +57,16 @@ function stripTags(html: string) {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
 }
 
+function getWeekKey(date: Date): string {
+  const target = new Date(date.valueOf())
+  const dayNr = (date.getUTCDay() + 6) % 7
+  target.setUTCDate(target.getUTCDate() - dayNr + 3)
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4))
+  const diff = target.valueOf() - firstThursday.valueOf()
+  const weekNumber = 1 + Math.round(diff / (7 * 24 * 3600 * 1000))
+  return `${target.getUTCFullYear()}-W${weekNumber}`
+}
+
 function deriveKeywords(subject: string, fallback: string[] = []) {
   const cleaned = subject.replace(/[^a-zA-Z0-9\s-]/g, " ").toLowerCase()
   const parts = cleaned.split(/\s+/).filter(Boolean)
@@ -343,9 +353,9 @@ function DemoContent() {
     { value: "1500", label: "1,500 words (demo cap)", allowed: !isAuthenticated },
     { value: "1500", label: "1,500 words (Free starter)", allowed: isAuthenticated && quota.plan === 'free' },
     { value: "2000", label: "2,000 words (Free max)", allowed: isAuthenticated && quota.plan === 'free' },
-    { value: "3000", label: "3,000 words (Pro starter)", allowed: isAuthenticated && quota.plan === 'pro' },
-    { value: "4500", label: "4,500 words (Pro long-form)", allowed: isAuthenticated && quota.plan === 'pro' },
-    { value: "6000", label: "6,000 words (Pro max)", allowed: isAuthenticated && quota.plan === 'pro' },
+    { value: "2000", label: "2,000 words (Pro quick)", allowed: isAuthenticated && quota.plan === 'pro' },
+    { value: "2500", label: "2,500 words (Pro depth)", allowed: isAuthenticated && quota.plan === 'pro' },
+    { value: "3000", label: "3,000 words (Pro max)", allowed: isAuthenticated && quota.plan === 'pro' },
   ]
 
   // Ensure selected word count remains valid when plan or options change
@@ -373,18 +383,22 @@ function DemoContent() {
     setError(null)
     setLoading(true)
     try {
+      const planWordCap = !isAuthenticated ? 1500 : quota.plan === 'pro' ? 3000 : 2000
+      const requestedWords = parseInt(wordCount) || planWordCap
+      const targetWords = Math.min(planWordCap, requestedWords)
+
       console.log('Generating article with payload:', {
         topic: topic.trim(),
         tone,
         language,
-        target_word_count: parseInt(wordCount) || 3000
+        target_word_count: targetWords
       })
 
       const rawResult = await generateDraft({
         topic: topic.trim(),
         tone: tone,
         language: language,
-        target_word_count: parseInt(wordCount) || 3000,
+        target_word_count: targetWords,
         research: true,
         generate_social: true,
         generate_image: true,
@@ -430,11 +444,13 @@ function DemoContent() {
   const lockoutMessage = (() => {
     if (isAuthenticated) {
       if (quota.plan === 'free') {
-        const monthlyLeft = Math.max(0, 31 - quota.monthGenerations)
-        return `${quota.todayGenerations}/${1} daily generation used • ${monthlyLeft}/31 left this month`
+        const weekKey = new Date()
+        const usedWeek = quota.lastWeekKey === getWeekKey(weekKey) ? quota.weekGenerations || 0 : 0
+        const monthlyLeft = Math.max(0, (quota.articlesPerMonth || 4) - quota.monthGenerations)
+        return `${usedWeek}/${quota.articlesPerWeek || 1} weekly generation used • ${monthlyLeft}/${quota.articlesPerMonth || 4} left this month`
       }
       if (quota.plan === 'pro') {
-        return `${quota.todayGenerations}/${15} daily generations used`
+        return `${quota.todayGenerations}/${5} daily generations used`
       }
     }
 
@@ -458,6 +474,13 @@ function DemoContent() {
     const { allowed, reason } = canUseTool(quota, isAuthenticated)
     if (!allowed) {
       setError(reason || "Extension limit reached. Upgrade for more daily runs.")
+      return
+    }
+
+    const planWordCap = quota.plan === 'pro' ? 3000 : 2000
+    const currentWords = result.word_count || stripTags(result.html || '').split(/\s+/).length
+    if (currentWords >= planWordCap) {
+      setError(`You've reached the ${planWordCap.toLocaleString()}-word cap for your plan. Upgrade or trim the draft to extend.`)
       return
     }
 
@@ -614,7 +637,7 @@ function DemoContent() {
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <Badge variant="outline">Demo & guests: up to 1,500 words</Badge>
               <Badge variant="outline">Free: unlock 2,000-word drafts</Badge>
-              <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">Pro: 6,000-word max</Badge>
+              <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">Pro: 3,000-word max</Badge>
               {siteUrl && (
                 <Badge variant="secondary">Interlinking with {normalizeUrl(siteUrl) || siteUrl}</Badge>
               )}
