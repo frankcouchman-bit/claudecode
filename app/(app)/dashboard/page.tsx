@@ -27,9 +27,11 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { fadeInUp } from "@/lib/animations"
 import Demo from "@/components/sections/demo"
+import { useQuota } from "@/contexts/quota-context"
 
 export default function Page(){
   const router = useRouter()
+  const { quota, refreshQuota, syncWithBackend } = useQuota()
   const [authed,setAuthed]=useState(false)
   const [loading,setLoading]=useState(true)
   const [profile,setProfile]=useState<any>(null)
@@ -42,6 +44,12 @@ export default function Page(){
     const a=isAuthed()
     setAuthed(a)
     if(!a){ setLoading(false) }
+
+    // keep local quota in sync when landing on dashboard
+    refreshQuota()
+    if (a) {
+      syncWithBackend()
+    }
 
     // Check for upgrade success
     if (typeof window !== 'undefined') {
@@ -154,10 +162,10 @@ export default function Page(){
     )
   }
 
-  const isPro = profile?.plan === 'pro'
-  const todayGens = profile?.usage?.today?.generations ?? 0
-  const monthGens = profile?.usage?.month?.generations ?? 0
-  const toolsToday = profile?.tool_usage_today ?? profile?.tools_today ?? 0
+  const isPro = profile?.plan === 'pro' || quota.plan === 'pro'
+  const todayGens = profile?.usage?.today?.generations ?? quota.todayGenerations ?? 0
+  const monthGens = profile?.usage?.month?.generations ?? Math.max(quota.weekGenerations, quota.todayGenerations)
+  const toolsToday = profile?.tool_usage_today ?? profile?.tools_today ?? quota.toolsToday ?? 0
   const toolLimit = isPro ? 5 : 1
 
   // Get recent articles (last 5)
