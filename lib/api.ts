@@ -1,22 +1,68 @@
 import { getAccessToken } from "@/lib/auth"
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://seoscribe.frank-couchman.workers.dev"
+
+type NormalizedArticle = {
+  id: string
+  title: string
+  topic: string
+  content: string
+  markdown: string
+  html: string
+  seo_score: number
+  created_at: string
+  updated_at: string
+} & Record<string, any>
+
+function mergeHeaders(input?: HeadersInit): Record<string, string> {
+  if (!input) return {}
+  if (input instanceof Headers) {
+    return Array.from(input.entries()).reduce<Record<string, string>>((acc, [key, value]) => {
+      acc[key] = value
+      return acc
+    }, {})
+  }
+  if (Array.isArray(input)) {
+    return input.reduce<Record<string, string>>((acc, [key, value]) => {
+      acc[key] = value
+      return acc
+    }, {})
+  }
+  return { ...input }
+}
+
 function withAuthHeaders(init: RequestInit = {}): RequestInit {
-  const token = typeof window !== 'undefined' ? getAccessToken() : null
+  const token = typeof window !== "undefined" ? getAccessToken() : null
   const headers: Record<string, string> = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
-  return { ...init, headers: { ...headers, ...(init.headers as any || {}) } }
+  return { ...init, headers: { ...headers, ...mergeHeaders(init.headers) } }
 }
+
 async function handle(res: Response) {
+  const rawText = await res.text().catch(() => "")
+  const contentType = res.headers.get("content-type") || ""
+
   if (!res.ok) {
-    const text = await res.text().catch(()=> '')
-    let errorMsg = text || `Request failed: ${res.status}`
+    let errorMsg = rawText || `Request failed: ${res.status}`
     try {
-      const json = JSON.parse(text)
+      const json = JSON.parse(rawText)
       errorMsg = json.error || json.message || errorMsg
-    } catch {}
+    } catch {
+      // Ignore JSON parse issues for error responses and fall back to the raw text
+    }
     throw new Error(errorMsg)
   }
-  const ct = res.headers.get("content-type") || ""; if (ct.includes("application/json")) return res.json(); return res.text()
+
+  // Gracefully handle malformed JSON from the backend to avoid crashing the client.
+  if (contentType.includes("application/json") || rawText.trim().match(/^[\[{]/)) {
+    try {
+      return rawText ? JSON.parse(rawText) : {}
+    } catch (error) {
+      throw new Error("Invalid JSON response from server")
+    }
+  }
+
+  return rawText
 }
 // Generate a draft article.  Calls the /api/draft endpoint instead of the legacy generate-draft route.
 export async function generateDraft(payload:any){
@@ -24,11 +70,61 @@ export async function generateDraft(payload:any){
   const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
   return handle(res)
 }
+function normalizeArticlePayload(payload: any): NormalizedArticle | null {
+  if (!payload || typeof payload !== "object") return null
+  const articleCandidate =
+    (typeof payload.article === "object" && payload.article !== null && payload.article) ||
+    (typeof payload.data === "object" && payload.data !== null && payload.data) ||
+    payload
+
+  const article = articleCandidate as Record<string, any>
+  const createdAt =
+    article.created_at ||
+    article.createdAt ||
+    article.updated_at ||
+    article.updatedAt ||
+    new Date().toISOString()
+
+  const updatedAt = article.updated_at || article.updatedAt || createdAt
+
+  return {
+    ...article,
+    id: article.id || article._id || article.uuid || "",
+    title: article.title || article.headline || article.topic || "",
+    topic: article.topic || article.title || "",
+    content: article.content || article.markdown || article.html || "",
+    markdown: article.markdown || "",
+    html: article.html || "",
+    seo_score: Number(article.seo_score ?? article.seoScore ?? article.score ?? 0) || 0,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  } as NormalizedArticle
+}
 export async function sendMagicLink(email:string, redirect?:string){ const res = await fetch(`${API_BASE}/auth/magic-link`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ email, redirect }) }); return handle(res) }
 export function googleAuthURL(redirect?:string){ const url = new URL(`${API_BASE}/auth/google`); if(redirect) url.searchParams.set("redirect", redirect); return url.toString() }
 export async function getProfile(){ const res = await fetch(`${API_BASE}/api/profile`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
-export async function listArticles(){ const res = await fetch(`${API_BASE}/api/articles`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
-export async function getArticle(id: string){ const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"GET", cache:"no-store" })); return handle(res) }
+export async function listArticles(): Promise<NormalizedArticle[]>{
+  const res = await fetch(`${API_BASE}/api/articles`, withAuthHeaders({ method:"GET", cache:"no-store" }))
+  const data = await handle(res)
+  const rawList =
+    (Array.isArray(data) && data) ||
+    (Array.isArray((data as any)?.articles) && (data as any).articles) ||
+    (Array.isArray((data as any)?.data) && (data as any).data) ||
+    []
+
+  return rawList.map(normalizeArticlePayload).filter(Boolean)
+}
+export async function getArticle(id: string): Promise<NormalizedArticle>{
+  const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"GET", cache:"no-store" }))
+  const data = await handle(res)
+  const article = normalizeArticlePayload(data)
+
+  if (!article) {
+    throw new Error("Invalid article payload from server")
+  }
+
+  return article
+}
 export async function saveArticle(payload: any){ const res = await fetch(`${API_BASE}/api/articles`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
 export async function updateArticle(id: string, payload: any){ const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"PUT", body: JSON.stringify(payload), cache:"no-store" })); return handle(res) }
 export async function deleteArticle(id: string){ const res = await fetch(`${API_BASE}/api/articles/${id}`, withAuthHeaders({ method:"DELETE", cache:"no-store" })); return handle(res) }
