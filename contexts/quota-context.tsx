@@ -44,7 +44,7 @@ export function QuotaProvider({ children }: { children: ReactNode }) {
           ...quota,
           plan: profile.plan || 'free',
           todayGenerations: profile.usage?.today?.generations || 0,
-          weekGenerations: profile.usage?.week?.generations || 0,
+          monthGenerations: profile.usage?.month?.generations || 0,
           toolsToday: profile.tools_today || 0,
         }
 

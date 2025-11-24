@@ -24,7 +24,7 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
     setQuota(currentQuota)
 
     // Show upgrade prompt if free user is running low
-    if (isAuthenticated && currentQuota.plan === 'free' && currentQuota.weekGenerations >= 1) {
+    if (isAuthenticated && currentQuota.plan === 'free' && currentQuota.todayGenerations >= 1) {
       setShowUpgradePrompt(true)
     }
   }, [isAuthenticated])
@@ -33,7 +33,7 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
 
   const isPro = quota.plan === 'pro'
   const articlesMax = isPro ? 15 : 1
-  const articlesUsed = isPro ? quota.todayGenerations : quota.weekGenerations
+  const articlesUsed = quota.todayGenerations
   const articlesRemaining = articlesMax - articlesUsed
   const percentage = (articlesUsed / articlesMax) * 100
 
@@ -81,9 +81,14 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                 max={articlesMax}
                 showLabel={false}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                {isPro ? 'Resets daily at midnight' : 'Resets weekly on Monday'}
-              </p>
+              <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                <p>{isPro ? 'Resets daily at midnight' : 'Resets daily for free users'}</p>
+                {!isPro && (
+                  <p className="text-[11px]">
+                    {Math.max(0, 31 - quota.monthGenerations)} of 31 free monthly generations remaining
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Tool Usage Quota */}
@@ -178,7 +183,7 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                     <TrendingUp className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold mb-1">Weekly Limit Reached!</h4>
+                    <h4 className="font-semibold mb-1">Daily Limit Reached!</h4>
                     <p className="text-sm text-muted-foreground mb-3">
                       Upgrade to Pro for 15 articles per day
                     </p>
@@ -220,7 +225,7 @@ export function QuotaBadge({ isAuthenticated }: { isAuthenticated: boolean }) {
   const isPro = quota.plan === 'pro'
   const remaining = isPro
     ? 15 - quota.todayGenerations
-    : 1 - quota.weekGenerations
+    : 1 - quota.todayGenerations
 
   return (
     <motion.div

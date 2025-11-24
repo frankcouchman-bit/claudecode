@@ -428,10 +428,11 @@ function DemoContent() {
   const lockoutMessage = (() => {
     if (isAuthenticated) {
       if (quota.plan === 'free') {
-        return `${quota.weekGenerations}/${1} weekly generation used`
+        const monthlyLeft = Math.max(0, 31 - quota.monthGenerations)
+        return `${quota.todayGenerations}/${1} daily generation used • ${monthlyLeft}/31 left this month`
       }
       if (quota.plan === 'pro') {
-        return `${quota.todayGenerations}/${10} daily generations used`
+        return `${quota.todayGenerations}/${15} daily generations used`
       }
     }
 

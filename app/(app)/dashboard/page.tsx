@@ -165,9 +165,9 @@ export default function Page(){
 
   const isPro = profile?.plan === 'pro' || quota.plan === 'pro'
   const todayGens = profile?.usage?.today?.generations ?? quota.todayGenerations ?? 0
-  const monthGens = profile?.usage?.month?.generations ?? Math.max(quota.weekGenerations, quota.todayGenerations)
+  const monthGens = profile?.usage?.month?.generations ?? quota.monthGenerations ?? quota.todayGenerations
   const toolsToday = profile?.tool_usage_today ?? profile?.tools_today ?? quota.toolsToday ?? 0
-  const toolLimit = isPro ? 5 : 1
+  const toolLimit = isPro ? 10 : 1
 
   // Get recent articles (last 5)
   const recentArticles = [...articles]
@@ -216,7 +216,7 @@ export default function Page(){
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
           <div>
             <p className="font-semibold">Welcome to Pro!</p>
-            <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 10 articles per day, 5 tools per day, and unlimited revisions.</p>
+              <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 15 articles per day, 10 tool calls per day, and unlimited revisions.</p>
           </div>
         </motion.div>
       )}
@@ -341,19 +341,19 @@ export default function Page(){
             <div className="text-2xl font-bold">
               {todayGens}
               {isPro ? (
-                <span className="text-sm text-muted-foreground ml-2">/ 10 daily</span>
+                <span className="text-sm text-muted-foreground ml-2">/ 15 daily</span>
               ) : (
-                <span className="text-sm text-muted-foreground ml-2">/ 1 weekly</span>
+                <span className="text-sm text-muted-foreground ml-2">/ 1 daily</span>
               )}
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mt-2">
               <div
                 className="bg-gradient-to-r from-purple-600 to-blue-600 h-1.5 rounded-full transition-all"
-                style={{ width: `${isPro ? Math.min((todayGens / 10) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
+                style={{ width: `${isPro ? Math.min((todayGens / 15) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {isPro ? `${Math.max(10 - todayGens, 0)} articles left today` : `Resets weekly`}
+              {isPro ? `${Math.max(15 - todayGens, 0)} articles left today` : `Resets daily`}
             </p>
           </CardContent>
         </Card>

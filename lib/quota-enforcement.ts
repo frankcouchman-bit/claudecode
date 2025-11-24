@@ -4,27 +4,25 @@ import Cookies from 'js-cookie'
 export interface QuotaLimits {
   plan: 'free' | 'pro'
   articlesPerDay: number
-  articlesPerWeek: number
+  articlesPerMonth: number
   toolsPerDay: number
   demoUsed: boolean
   demoUsedAt?: string
   lastArticleGenerated?: string
   todayGenerations: number
-  weekGenerations: number
+  monthGenerations: number
   toolsToday: number
 }
 
 const DEMO_LOCKOUT_DAYS = 30
-// Updated quotas to match backend logic and business rules
-// Free plan: 1 article per week and 1 tool use per week
-const FREE_ARTICLES_PER_WEEK = 1
-const FREE_TOOLS_PER_WEEK = 1
-// Alias to maintain backwards compatibility with existing code.  For the free plan we treat
-// tools per day as the weekly limit (1 per week).  The name is kept for backward usage.
-const FREE_TOOLS_PER_DAY = FREE_TOOLS_PER_WEEK
-// Pro plan: 10 articles per day and 5 tools per day
-const PRO_ARTICLES_PER_DAY = 10
-const PRO_TOOLS_PER_DAY = 5
+// Updated quotas to match backend worker logic
+// Free plan: 1 article per day, up to 31 per month, and 1 tool use per day
+const FREE_ARTICLES_PER_DAY = 1
+const FREE_ARTICLES_PER_MONTH = 31
+const FREE_TOOLS_PER_DAY = 1
+// Pro plan: 15 articles per day and 10 tool calls per day
+const PRO_ARTICLES_PER_DAY = 15
+const PRO_TOOLS_PER_DAY = 10
 
 // Get quota from localStorage
 export function getQuota(): QuotaLimits {
@@ -35,7 +33,8 @@ export function getQuota(): QuotaLimits {
   const stored = localStorage.getItem('seoscribe_quota')
   if (stored) {
     try {
-      return JSON.parse(stored)
+      const parsed = JSON.parse(stored)
+      return { ...getDefaultQuota(), ...parsed }
     } catch {
       return getDefaultQuota()
     }
@@ -46,12 +45,12 @@ export function getQuota(): QuotaLimits {
 function getDefaultQuota(): QuotaLimits {
   return {
     plan: 'free',
-    articlesPerDay: 0,
-    articlesPerWeek: FREE_ARTICLES_PER_WEEK,
+    articlesPerDay: FREE_ARTICLES_PER_DAY,
+    articlesPerMonth: FREE_ARTICLES_PER_MONTH,
     toolsPerDay: FREE_TOOLS_PER_DAY,
     demoUsed: false,
     todayGenerations: 0,
-    weekGenerations: 0,
+    monthGenerations: 0,
     toolsToday: 0
   }
 }
@@ -82,23 +81,29 @@ export function canGenerateArticle(quota: QuotaLimits, isAuthenticated: boolean)
     return { allowed: true } // First demo use
   }
 
-  // Free plan - 1 article per week
+  // Free plan - 1 article per day (up to 31 per month)
   if (quota.plan === 'free') {
-    if (quota.weekGenerations >= FREE_ARTICLES_PER_WEEK) {
+    if (quota.todayGenerations >= FREE_ARTICLES_PER_DAY) {
       return {
         allowed: false,
-        reason: 'Weekly limit reached. Upgrade to Pro for 10 articles per day.'
+        reason: 'Daily limit reached. Upgrade to Pro for 15 articles per day.'
+      }
+    }
+    if (quota.monthGenerations >= FREE_ARTICLES_PER_MONTH) {
+      return {
+        allowed: false,
+        reason: 'Monthly limit reached. Upgrade to Pro for higher limits.'
       }
     }
     return { allowed: true }
   }
 
-  // Pro plan - 10 articles per day
+  // Pro plan - 15 articles per day
   if (quota.plan === 'pro') {
     if (quota.todayGenerations >= PRO_ARTICLES_PER_DAY) {
       return {
         allowed: false,
-        reason: 'Daily limit reached (10 articles). Resets at midnight.'
+        reason: 'Daily limit reached (15 articles). Resets at midnight.'
       }
     }
     return { allowed: true }
@@ -116,23 +121,23 @@ export function canUseTool(quota: QuotaLimits, isAuthenticated: boolean): { allo
     }
   }
 
-  // Free plan - 1 tool use per week
+  // Free plan - 1 tool use per day
   if (quota.plan === 'free') {
-    if (quota.toolsToday >= FREE_TOOLS_PER_WEEK) {
+    if (quota.toolsToday >= FREE_TOOLS_PER_DAY) {
       return {
         allowed: false,
-        reason: 'Weekly tool limit reached. Upgrade to Pro for 5 uses per day.'
+        reason: 'Daily tool limit reached. Upgrade to Pro for 10 uses per day.'
       }
     }
     return { allowed: true }
   }
 
-  // Pro plan - 5 tools per day
+  // Pro plan - 10 tools per day
   if (quota.plan === 'pro') {
     if (quota.toolsToday >= PRO_TOOLS_PER_DAY) {
       return {
         allowed: false,
-        reason: 'Daily tool limit reached (5 uses). Resets at midnight.'
+        reason: 'Daily tool limit reached (10 uses). Resets at midnight.'
       }
     }
     return { allowed: true }
@@ -160,7 +165,7 @@ export function recordArticleGeneration(quota: QuotaLimits, isAuthenticated: boo
   return {
     ...resetQuota,
     todayGenerations: resetQuota.todayGenerations + 1,
-    weekGenerations: resetQuota.weekGenerations + 1,
+    monthGenerations: resetQuota.monthGenerations + 1,
     lastArticleGenerated: now
   }
 }
@@ -187,31 +192,16 @@ function resetCountersIfNeeded(quota: QuotaLimits): QuotaLimits {
   // Reset counters if a new day has started
   if (lastGen.toDateString() !== now.toDateString()) {
     updated.todayGenerations = 0
-    // For Pro plans, reset tool usage daily.  For free plans, tools reset weekly below.
-    if (updated.plan === 'pro') {
-      updated.toolsToday = 0
-    }
-  }
-
-  // Reset weekly counters if a new week has started
-  const lastWeek = getWeekNumber(lastGen)
-  const currentWeek = getWeekNumber(now)
-  if (lastWeek !== currentWeek || lastGen.getFullYear() !== now.getFullYear()) {
-    updated.weekGenerations = 0
-    // Reset free plan tool usage weekly
+    // Reset tool usage daily for all plans (backend enforces per-day limits)
     updated.toolsToday = 0
   }
 
-  return updated
-}
+  // Reset monthly counters if a new month has started
+  if (lastGen.getUTCFullYear() !== now.getUTCFullYear() || lastGen.getUTCMonth() !== now.getUTCMonth()) {
+    updated.monthGenerations = 0
+  }
 
-// Get week number
-function getWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return updated
 }
 
 // Update plan
@@ -219,8 +209,8 @@ export function updatePlan(quota: QuotaLimits, newPlan: 'free' | 'pro'): QuotaLi
   return {
     ...quota,
     plan: newPlan,
-    articlesPerDay: newPlan === 'pro' ? PRO_ARTICLES_PER_DAY : 0,
-    articlesPerWeek: newPlan === 'free' ? FREE_ARTICLES_PER_WEEK : 0,
+    articlesPerDay: newPlan === 'pro' ? PRO_ARTICLES_PER_DAY : FREE_ARTICLES_PER_DAY,
+    articlesPerMonth: newPlan === 'pro' ? 0 : FREE_ARTICLES_PER_MONTH,
     toolsPerDay: newPlan === 'pro' ? PRO_TOOLS_PER_DAY : FREE_TOOLS_PER_DAY
   }
 }
@@ -228,8 +218,8 @@ export function updatePlan(quota: QuotaLimits, newPlan: 'free' | 'pro'): QuotaLi
 // Get remaining quota display
 export function getRemainingQuota(quota: QuotaLimits): string {
   if (quota.plan === 'free') {
-    const remaining = FREE_ARTICLES_PER_WEEK - quota.weekGenerations
-    return `${remaining} article${remaining !== 1 ? 's' : ''} left this week`
+    const remainingToday = FREE_ARTICLES_PER_DAY - quota.todayGenerations
+    return `${remainingToday} article${remainingToday !== 1 ? 's' : ''} left today`
   }
 
   const remaining = PRO_ARTICLES_PER_DAY - quota.todayGenerations
