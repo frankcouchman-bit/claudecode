@@ -57,7 +57,7 @@ export default function Page() {
     },
     {
       icon: FileText,
-      title: "1,500-3,000 Word Articles",
+      title: "2,000-6,000 Word Articles",
       description: "Long-form, comprehensive content that establishes authority"
     },
     {
@@ -93,7 +93,7 @@ export default function Page() {
     },
     {
       question: "How long are the articles generated?",
-      answer: "Articles typically range from 1,500 to 3,000 words depending on your topic and target word count. You can specify your preferred length, and our AI will create comprehensive, in-depth content that thoroughly covers the subject."
+      answer: "Articles typically range from 2,000 to 6,000 words depending on your topic and target word count. You can specify your preferred length, and our AI will create comprehensive, in-depth content that thoroughly covers the subject."
     },
     {
       question: "Is the content plagiarism-free?",
@@ -109,8 +109,7 @@ export default function Page() {
     },
     {
       question: "How many articles can I generate per month?",
-      answer:
-        "Free plan includes 1 article per week with AI-generated hero images and 1 SEO tool per week. Pro plan offers 10 articles per day and 5 tool uses per day, giving you the freedom to scale your content production without limits."
+      answer: "Free plan includes 1 article per week and 1 tool per week with AI-generated hero images. Pro plan offers 10 articles per day and 5 tools per day, letting you scale your content production without limits."
     },
     {
       question: "Does it include keyword research?",
@@ -155,7 +154,7 @@ export default function Page() {
               transition={{ delay: 0.2 }}
               className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto"
             >
-              Create 1,500-3,000 word, SERP-optimized articles with citations, images, and perfect on-page SEO in under 60 seconds.
+              Create 2,000-6,000 word, SERP-optimized articles with citations, images, and perfect on-page SEO in under 60 seconds.
             </motion.p>
 
             <motion.div

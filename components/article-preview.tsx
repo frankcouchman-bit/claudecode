@@ -64,25 +64,24 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
     setSaving(true)
     try {
-      const response = await saveArticle({
-        // Save all available fields.  Fallback to nested image fields when
-        // available because the API may return the hero image under `image`.
+        const response = await saveArticle({
         title: result.title,
         content: result.html || result.markdown,
         markdown: result.markdown,
         html: result.html,
         meta_title: result.meta_title,
         meta_description: result.meta_description,
-        meta_keywords: result.meta_keywords || result.keywords,
+                meta_keywords: Array.isArray(result.meta_keywords) ? result.meta_keywords : Array.isArray(result.keywords) ? result.keywords : [],
         seo_score: result.seo_score,
         readability_score: result.readability_score,
         word_count: result.word_count,
-        image_url: result.image_url || (result.image && (result.image.image_url || result.image.image_b64)) || undefined,
-        citations: result.citations,
-        faqs: result.faqs,
-        social_posts: result.social_posts,
-        keywords: result.keywords,
-        internal_links: result.internal_links,
+        // Use nested image object if present
+        image_url: result.image_url || (result.image && result.image.image_url) || (result.image && result.image.image_b64),
+        citations: Array.isArray(result.citations) ? result.citations : [],
+        faqs: Array.isArray(result.faqs) ? result.faqs : [],
+        social_posts: result.social_posts || {},
+        keywords: Array.isArray(result.keywords) ? result.keywords : [],
+        internal_links: Array.isArray(result.internal_links) ? result.internal_links : []
       })
 
       setSaved(true)
@@ -243,8 +242,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                            prose-img:rounded-lg prose-img:shadow-md
                            prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
-                // Use html or markdown fallback safely
-                dangerouslySetInnerHTML={{ __html: result?.html || result?.markdown || "" }}
+                dangerouslySetInnerHTML={{ __html: result?.html || "" }}
               />
             </CardContent>
           </Card>
@@ -286,7 +284,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                     {result.internal_links.slice(0, 5).map((link: any, i: number) => (
                       <li key={i} className="text-sm">
                         <a href={link.url} className="text-primary hover:underline">
-                          {link.anchor_text || link.title || link.url}
+                          {link.anchor_text || link.url}
                         </a>
                       </li>
                     ))}
@@ -343,7 +341,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Array.isArray(result?.social_posts) && result.social_posts.length > 0 ? (
+              {result?.social_posts && result.social_posts.length > 0 ? (
                 result.social_posts.map((post: any, i: number) => (
                   <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
                     <div className="flex items-center justify-between">

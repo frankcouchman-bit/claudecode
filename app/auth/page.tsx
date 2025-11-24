@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { captureTokensFromURL, clearTokens, getAccessToken, isAuthed } from "@/lib/auth"
+import { captureTokensFromURL, clearTokens, getAccessToken } from "@/lib/auth"
 import { sendMagicLink, googleAuthURL } from "@/lib/api"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -30,33 +30,24 @@ export default function Page(){
   const [redirecting, setRedirecting] = useState(false)
 
   useEffect(() => {
-    // Capture tokens from URL if present.  This stores access and
-    // refresh tokens in localStorage when the magic link or OAuth
-    // callback returns to this page.
+    // Capture tokens from URL if present
     captureTokensFromURL()
 
-    // After a short delay, verify whether a valid token exists.  We
-    // explicitly use isAuthed() rather than simply checking for any
-    // token, because expired or malformed tokens can remain in
-    // localStorage and cause redirect loops.  If a valid token is
-    // present, redirect to the dashboard.  Otherwise clear the
-    // invalid tokens so the user can sign in again without being
-    // bounced back to this page.
-    const timer = setTimeout(() => {
-      if (isAuthed()) {
+    // Small delay to ensure tokens are stored before checking
+    const checkAuth = setTimeout(() => {
+      const token = getAccessToken()
+      if (token) {
         setRedirecting(true)
+        // Use window.location for more reliable redirect in production
         if (typeof window !== 'undefined') {
           window.location.href = '/dashboard'
         } else {
           router.push('/dashboard')
         }
-      } else {
-        clearTokens()
-        setRedirecting(false)
       }
     }, 200)
 
-    return () => clearTimeout(timer)
+    return () => clearTimeout(checkAuth)
   }, [router])
 
   async function magic() {

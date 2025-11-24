@@ -15,11 +15,7 @@ import {
   suggestInternalLinks as apiSuggestInternalLinks,
   analyzeReadability as apiAnalyzeReadability,
   generateContentBrief as apiGenerateContentBrief,
-  checkKeywordDensity as apiCheckKeywordDensity,
-  analyzeHeadlineApi,
-  serpPreview,
-  checkPlagiarism,
-  competitorAnalysis
+  checkKeywordDensity as apiCheckKeywordDensity
 } from "@/lib/api"
 import {
   Heading,
@@ -53,18 +49,6 @@ export default function ToolsPage() {
   const [copied, setCopied] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  // New tool state
-  const [headlineAnalysisInput, setHeadlineAnalysisInput] = useState("")
-  const [headlineAnalysisResult, setHeadlineAnalysisResult] = useState<any>(null)
-  const [serpTitle, setSerpTitle] = useState("")
-  const [serpDescription, setSerpDescription] = useState("")
-  const [serpUrl, setSerpUrl] = useState("")
-  const [serpResult, setSerpResult] = useState<any>(null)
-  const [plagiarismInput, setPlagiarismInput] = useState("")
-  const [plagiarismResult, setPlagiarismResult] = useState<any>(null)
-  const [competitorKeyword, setCompetitorKeyword] = useState("")
-  const [competitorResult, setCompetitorResult] = useState<any>(null)
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
@@ -212,79 +196,6 @@ export default function ToolsPage() {
     }
   }
 
-  // New tool actions
-  async function analyzeHeadline() {
-    if (!headlineAnalysisInput.trim()) {
-      setError("Please enter a headline")
-      return
-    }
-    if (!checkQuotaAndRecordUsage('headline')) return
-    setLoading('headline')
-    try {
-      const res = await analyzeHeadlineApi({ headline: headlineAnalysisInput })
-      setHeadlineAnalysisResult(res)
-    } catch (e: any) {
-      setError(e?.message || 'Failed to analyze headline')
-      setHeadlineAnalysisResult(null)
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  async function doSerpPreview() {
-    if (!serpTitle.trim() || !serpDescription.trim() || !serpUrl.trim()) {
-      setError('Please fill out title, description and URL')
-      return
-    }
-    if (!checkQuotaAndRecordUsage('serp')) return
-    setLoading('serp')
-    try {
-      const res = await serpPreview({ title: serpTitle, description: serpDescription, url: serpUrl })
-      setSerpResult(res)
-    } catch (e: any) {
-      setError(e?.message || 'Failed to generate SERP preview')
-      setSerpResult(null)
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  async function checkPlagiarismAction() {
-    if (!plagiarismInput.trim()) {
-      setError('Please enter content to check for plagiarism')
-      return
-    }
-    if (!checkQuotaAndRecordUsage('plagiarism')) return
-    setLoading('plagiarism')
-    try {
-      const res = await checkPlagiarism({ content: plagiarismInput })
-      setPlagiarismResult(res)
-    } catch (e: any) {
-      setError(e?.message || 'Failed to check plagiarism')
-      setPlagiarismResult(null)
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  async function runCompetitorAnalysis() {
-    if (!competitorKeyword.trim()) {
-      setError('Please enter a keyword')
-      return
-    }
-    if (!checkQuotaAndRecordUsage('competitor')) return
-    setLoading('competitor')
-    try {
-      const res = await competitorAnalysis({ keyword: competitorKeyword })
-      setCompetitorResult(res)
-    } catch (e: any) {
-      setError(e?.message || 'Failed to analyze competitors')
-      setCompetitorResult(null)
-    } finally {
-      setLoading(null)
-    }
-  }
-
   return (
     <div className="container py-10">
       <div className="mb-8">
@@ -299,7 +210,7 @@ export default function ToolsPage() {
             className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
           >
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              Sign in to access all writing tools. Free plan includes 1 tool use per week.
+              Sign in to access all writing tools. Free plan includes 1 tool use per day.
             </p>
           </motion.div>
         )}
@@ -335,18 +246,13 @@ export default function ToolsPage() {
       </div>
 
       <Tabs defaultValue="headline" className="space-y-6">
-        {/* Tab bar: include all tools available via the backend */}
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-10 overflow-x-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
           <TabsTrigger value="headline">Headlines</TabsTrigger>
           <TabsTrigger value="meta">Meta Tags</TabsTrigger>
-          <TabsTrigger value="links">Internal Links</TabsTrigger>
+          <TabsTrigger value="links">Links</TabsTrigger>
           <TabsTrigger value="readability">Readability</TabsTrigger>
           <TabsTrigger value="brief">Brief</TabsTrigger>
           <TabsTrigger value="keywords">Keywords</TabsTrigger>
-          <TabsTrigger value="headline-analysis">Headline Analysis</TabsTrigger>
-          <TabsTrigger value="serp">SERP Preview</TabsTrigger>
-          <TabsTrigger value="plagiarism">Plagiarism</TabsTrigger>
-          <TabsTrigger value="competitor">Competitor</TabsTrigger>
         </TabsList>
 
         {/* Headline Generator */}
