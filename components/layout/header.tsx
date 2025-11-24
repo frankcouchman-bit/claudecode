@@ -36,16 +36,20 @@ export function Header() {
     }
   }, [authed])
 
-  // Navigation items visible to all users
-  const navItems = [
-    { href: "/article-writer", label: "Article Writer" },
-    { href: "/ai-writer", label: "AI Writer" },
-    { href: "/writing-tool", label: "Tools" },
-    { href: "/pricing", label: "Pricing" },
-    { href: "/blog", label: "Blog" },
-    // Show dashboard link only if signed in
-    ...(authed ? [{ href: "/dashboard", label: "Dashboard" }] : [])
-  ]
+  // Navigation items vary by auth state so signed-in users see only the essentials.
+  const navItems = authed
+    ? [
+        { href: "/dashboard", label: "Dashboard" },
+        { href: "/blog", label: "Blog" },
+        { href: "/pricing", label: "Pricing" },
+      ]
+    : [
+        { href: "/article-writer", label: "Article Writer" },
+        { href: "/ai-writer", label: "AI Writer" },
+        { href: "/writing-tool", label: "Tools" },
+        { href: "/pricing", label: "Pricing" },
+        { href: "/blog", label: "Blog" },
+      ]
 
   return (
     <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg shadow-sm">

@@ -116,7 +116,8 @@ export default function Page(){
       const {url}=await openPortal(window.location.origin+'/dashboard')
       window.location.href=url
     }catch(e:any){
-      alert(e?.message||'Portal failed')
+      const message = e?.message || 'Billing portal unavailable. Please try again or contact support.'
+      setErr(message)
     }
   }
 

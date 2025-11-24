@@ -75,17 +75,15 @@ function normalizeUrl(input?: string) {
 
 function buildInternalLinks(topic: string, siteUrl?: string) {
   const anchors = [
-    { url: "/blog/ai-content-generators-on-page-seo", anchor_text: "AI generators for on-page SEO" },
-    { url: "/blog/best-ai-seo-article-writer-2025", anchor_text: "Best AI SEO writers" },
-    { url: "/blog/keyword-research-ai-writers", anchor_text: "Keyword research for AI writers" },
-    { url: "/blog/serp-analysis-ai-tools", anchor_text: "SERP analysis with AI" },
-    { url: "/tools", anchor_text: "SEO tools dashboard" },
+    { url: "/article-writer", anchor_text: "AI article writer" },
+    { url: "/pricing", anchor_text: "Plans and pricing" },
+    { url: "/tools", anchor_text: "SEO toolkit" },
   ]
 
   const normalized = normalizeUrl(siteUrl)
   if (normalized) {
     anchors.unshift({ url: normalized, anchor_text: `${new URL(normalized).hostname} homepage` })
-    anchors.unshift({ url: `${normalized}/blog`, anchor_text: `${new URL(normalized).hostname} blog` })
+    anchors.unshift({ url: `${normalized}/resources`, anchor_text: `${new URL(normalized).hostname} resources` })
   }
 
   if (!topic) return anchors
@@ -121,13 +119,25 @@ function buildFaqs(topic: string) {
   ]
 }
 
-function buildFallbackHtml(title: string, description: string, keywords: string[], links: any[], faqs: any[]) {
+function buildCitations(keywords: string[], topic: string) {
+  const base = keywords.length ? keywords.slice(0, 4) : deriveKeywords(topic, [])
+  return base.map((kw, i) => ({
+    title: `Source ${i + 1}: ${kw.toUpperCase()}`,
+    url: `https://www.google.com/search?q=${encodeURIComponent(kw)}`,
+    description: `Research touchpoint for ${kw}`,
+  }))
+}
+
+function buildFallbackHtml(title: string, description: string, keywords: string[], links: any[], faqs: any[], citations: any[]) {
   const keywordsLine = keywords.length ? `<p><strong>Primary keywords:</strong> ${keywords.join(", ")}</p>` : ""
   const linksList = links
     .map((link: any) => `<li><a href="${link.url}" rel="internal">${link.anchor_text}</a></li>`)
     .join("")
   const faqsHtml = faqs
     .map((faq: any) => `<div><h3>${faq.question}</h3><p>${faq.answer}</p></div>`)
+    .join("")
+  const citationsHtml = citations
+    .map((c: any) => `<li><a href="${c.url}" rel="noopener" target="_blank">${c.title}</a></li>`)
     .join("")
 
   return `
@@ -156,6 +166,10 @@ function buildFallbackHtml(title: string, description: string, keywords: string[
       <section>
         <h2>Frequently asked questions</h2>
         ${faqsHtml}
+      </section>
+      <section>
+        <h2>Citations and sources</h2>
+        <ol>${citationsHtml}</ol>
       </section>
     </article>
   `
@@ -224,7 +238,9 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
   const markdownRaw = coerceString(base.markdown || base.content || base.html || base.body)
   const html = ensureHtml(htmlRaw, markdownRaw)
 
-  const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, metaKeywords, internalLinks, faqs))
+  const citations = Array.isArray(base.citations) ? base.citations.filter(Boolean) : buildCitations(metaKeywords, title)
+
+  const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, metaKeywords, internalLinks, faqs, citations))
   const textForCount = stripTags(safeHtml || markdownRaw)
   const generatedCount = base.word_count || base.target_word_count || (textForCount ? textForCount.split(/\s+/).length : 0)
   const wordCount = context.baseWordCount ? context.baseWordCount + generatedCount : generatedCount
@@ -257,7 +273,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     meta_description: summary,
     meta_keywords: metaKeywords,
     keywords: Array.isArray(base.keywords) && base.keywords.length > 0 ? base.keywords : metaKeywords,
-    citations: Array.isArray(base.citations) ? base.citations.filter(Boolean) : [],
+    citations,
     faqs,
     internal_links: internalLinks,
     social_posts: socialPosts,
@@ -286,9 +302,10 @@ function DemoContent() {
 
   // Determine allowed word counts based on plan and surface locked options for clarity
   const wordOptions = [
-    { value: "1200", label: "1,200 words (demo safe)", allowed: true },
-    { value: "1500", label: "1,500 words (guest/demo)", allowed: true },
-    { value: "2000", label: "2,000 words (Free cap)", allowed: isAuthenticated },
+    { value: "1200", label: "1,200 words (demo safe)", allowed: !isAuthenticated },
+    { value: "1500", label: "1,500 words (demo cap)", allowed: !isAuthenticated },
+    { value: "1500", label: "1,500 words (Free starter)", allowed: isAuthenticated && quota.plan === 'free' },
+    { value: "2000", label: "2,000 words (Free max)", allowed: isAuthenticated && quota.plan === 'free' },
     { value: "3000", label: "3,000 words (Pro starter)", allowed: isAuthenticated && quota.plan === 'pro' },
     { value: "4500", label: "4,500 words (Pro long-form)", allowed: isAuthenticated && quota.plan === 'pro' },
     { value: "6000", label: "6,000 words (Pro max)", allowed: isAuthenticated && quota.plan === 'pro' },
@@ -372,6 +389,26 @@ function DemoContent() {
   const quotaInfo = getRemainingQuota(quota)
 
   const maxAllowedOption = [...wordOptions].reverse().find((opt) => opt.allowed)
+
+  const lockoutMessage = (() => {
+    if (isAuthenticated) {
+      if (quota.plan === 'free') {
+        return `${quota.weekGenerations}/${1} weekly generation used`
+      }
+      if (quota.plan === 'pro') {
+        return `${quota.todayGenerations}/${10} daily generations used`
+      }
+    }
+
+    if (quota.demoUsed && quota.demoUsedAt) {
+      const usedDate = new Date(quota.demoUsedAt)
+      const daysDiff = Math.floor((Date.now() - usedDate.getTime()) / (1000 * 60 * 60 * 24))
+      const daysLeft = Math.max(0, 30 - daysDiff)
+      if (daysLeft > 0) return `Demo locked for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}`
+    }
+
+    return null
+  })()
 
   async function extendDraft() {
     if (!result) return
@@ -595,6 +632,9 @@ function DemoContent() {
                   {quotaInfo}
                 </Badge>
               </motion.div>
+            )}
+            {lockoutMessage && (
+              <p className="text-xs text-red-600">{lockoutMessage}</p>
             )}
           </div>
         </CardContent>

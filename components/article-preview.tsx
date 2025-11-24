@@ -41,6 +41,30 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const titleIdeas = (() => {
+    const primary = result?.title || "SEO Article"
+    const keywords: string[] = Array.isArray(result?.meta_keywords) && result.meta_keywords.length
+      ? result.meta_keywords
+      : Array.isArray(result?.keywords)
+        ? result.keywords
+        : []
+
+    const seed = keywords[0] || primary
+    const variants = Array.from(new Set([
+      primary,
+      `${seed} – Complete Guide`,
+      `${seed} Checklist (${new Date().getFullYear()})`,
+      `How to ${seed}`,
+    ])).
+      filter(Boolean)
+
+    return variants.map((title) => {
+      const lengthScore = title.length >= 45 && title.length <= 65 ? 95 : 75
+      const keywordScore = keywords.some((kw) => title.toLowerCase().includes(String(kw).toLowerCase())) ? 5 : 0
+      return { title, score: Math.min(100, lengthScore + keywordScore) }
+    })
+  })()
+
   const safeHtml = ensureHtml(result?.html, result?.content)
   const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
   const fallbackMarkdownHtml = sanitizeHtml(safeMarkdown)
@@ -278,6 +302,25 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
         {/* SEO Data Tab */}
         <TabsContent value="seo" className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Tags className="w-5 h-5 text-green-500" />
+                  Title A/B Ideas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {titleIdeas.map((idea, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/40">
+                    <div>
+                      <p className="font-medium">{idea.title}</p>
+                      <p className="text-xs text-muted-foreground">Optimised for length, clarity, and keyword inclusion.</p>
+                    </div>
+                    <Badge>{idea.score}/100</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
