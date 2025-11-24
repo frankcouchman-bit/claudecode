@@ -127,7 +127,10 @@ export default function ToolsPage() {
 
     setLoading('links')
     try {
-      const result = await apiSuggestInternalLinks({ content: linkInput })
+      // Provide both topic and text when suggesting internal links.  The keyword service
+      // extracts primary, secondary and long-tail keywords from the full text and uses
+      // the topic as a hint.  Using both fields yields more relevant suggestions.
+      const result = await apiSuggestInternalLinks({ topic: linkInput, text: linkInput })
       setLinkResults(result.links || [])
     } catch (e: any) {
       setError(e?.message || "Failed to suggest links")
