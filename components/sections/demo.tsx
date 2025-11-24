@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { generateDraft, saveArticle } from "@/lib/api"
+import { ensureHtml } from "@/lib/sanitize-html"
 import { ArticlePreview } from "@/components/article-preview"
 import { useQuota } from "@/contexts/quota-context"
 import {
@@ -74,7 +75,7 @@ function normalizeDraftResult(raw: any): DraftResult {
   const base = typeof raw.data === "object" && raw.data !== null ? raw.data : raw
 
   const title = base.title || base.topic || "Your Article"
-  const html = coerceString(
+  const html = ensureHtml(
     typeof base.html === "string"
       ? base.html
       : typeof base.content === "string"
@@ -84,7 +85,7 @@ function normalizeDraftResult(raw: any): DraftResult {
           : ""
   )
 
-  const markdown = coerceString(base.markdown)
+  const markdown = coerceString(base.markdown || base.content || base.html)
   const metaKeywords = Array.isArray(base.meta_keywords)
     ? base.meta_keywords
     : Array.isArray(base.keywords)

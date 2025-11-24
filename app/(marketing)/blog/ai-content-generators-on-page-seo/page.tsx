@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { BlogPostLayout } from "@/components/blog/post-layout"
 import { SEOAppendix } from "@/components/blog/seo-appendix"
 
@@ -27,6 +29,22 @@ export default function Page() {
           deliver both depth and structure.  AI content generators like SEOScribe help bridge that
           gap by automating research and enforcing best practices as you write.
         </p>
+
+        <div className="grid gap-4 sm:grid-cols-2 my-8">
+          {["SERP-grade outlines", "Meta-perfect drafts", "Internal linking map", "Refresh-ready QA"].map((item) => (
+            <Card key={item} className="border-2 border-purple-100 dark:border-purple-900/40">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">{item}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Auto-generated guardrails that keep every draft publication-ready.
+                  </p>
+                </div>
+                <Badge variant="secondary" className="text-xs">+SEO</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         <h2>AI‑Powered Keyword Research and SERP Analysis</h2>
         <p>
@@ -61,6 +79,21 @@ export default function Page() {
           comparison.
         </p>
 
+        <div className="rounded-2xl border bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/10 p-6 my-10 space-y-3">
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            On-page SEO launch checklist
+          </h3>
+          <ul className="grid md:grid-cols-2 gap-3 text-sm text-muted-foreground list-disc pl-6">
+            <li>Place the primary keyword in H1, first 150 words, and one subheading.</li>
+            <li>Cap meta title at ~60 characters; keep meta description within 155 characters.</li>
+            <li>Add 2–3 internal links above the fold, anchored on descriptive phrases.</li>
+            <li>Use compressed hero imagery with descriptive alt text and lazy loading.</li>
+            <li>Break paragraphs into 3–4 sentences for mobile readability.</li>
+            <li>Insert one comparison table or bullet list every 400–500 words.</li>
+          </ul>
+        </div>
+
         <h2>Integrating Internal Links Automatically</h2>
         <p>
           Internal linking is a crucial yet often overlooked part of on‑page SEO.  Properly placed
@@ -93,6 +126,16 @@ export default function Page() {
           SERP research reflects local results and popular queries.  Localisation improves relevance
           and can give you an edge over generic content.
         </p>
+
+        <Card className="my-8 border-2 border-blue-100 dark:border-blue-900/40">
+          <CardContent className="p-6 space-y-2">
+            <h3 className="text-lg font-semibold">Regional optimisation blueprint</h3>
+            <p className="text-sm text-muted-foreground">
+              Pair SERP research with country-specific modifiers, swap units and currencies, and translate calls-to-action.
+              SEOScribe will mirror local snippets so your article feels native, not machine-generated.
+            </p>
+          </CardContent>
+        </Card>
 
         <h2>Avoiding Common Pitfalls</h2>
         <p>

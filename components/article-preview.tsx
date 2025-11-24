@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { saveArticle } from "@/lib/api"
+import { ensureHtml, sanitizeHtml } from "@/lib/sanitize-html"
 import { useQuota } from "@/contexts/quota-context"
 import { motion } from "framer-motion"
 import {
@@ -40,15 +41,10 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const safeHtml = typeof result?.html === "string" ? result.html : ""
+  const safeHtml = ensureHtml(result?.html, result?.content)
   const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
-  const fallbackMarkdownHtml = safeMarkdown.trim()
-    ? `<p>${safeMarkdown
-        .trim()
-        .replace(/\n{2,}/g, "</p><p>")
-        .replace(/\n/g, "<br />")}</p>`
-    : ""
-  const renderedHtml = safeHtml.trim() ? safeHtml : fallbackMarkdownHtml
+  const fallbackMarkdownHtml = sanitizeHtml(safeMarkdown)
+  const renderedHtml = safeHtml || fallbackMarkdownHtml
 
   // Bail out early if the payload is missing or malformed instead of throwing.
   if (!result || typeof result !== "object") {

@@ -1,6 +1,8 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { BlogPostLayout } from "@/components/blog/post-layout"
 import { SEOAppendix } from "@/components/blog/seo-appendix"
 
@@ -30,6 +32,20 @@ export default function Page() {
           competition.
         </p>
 
+        <div className="grid gap-4 sm:grid-cols-2 my-8">
+          {["SERP-aware research", "Pillar-length drafts", "Internal link coach", "Export-ready HTML/MD"].map((item) => (
+            <Card key={item} className="border-2 border-purple-100 dark:border-purple-900/40">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">{item}</p>
+                  <p className="text-sm text-muted-foreground">Checked by SEOScribe so your post ships polished.</p>
+                </div>
+                <Badge variant="secondary" className="text-xs">2025</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
       <h2>Why AI Writers Matter for SEO</h2>
       <p>
         Search engines reward depth, relevance and fresh insights.  Long‑form articles packed with
@@ -52,6 +68,21 @@ export default function Page() {
         your CMS or WordPress with a click?  These practical considerations separate marketing
         gimmicks from professional‑grade software.
       </p>
+
+      <div className="grid md:grid-cols-3 gap-4 my-8">
+        {[
+          { label: "Depth", detail: "2k–6k words with SERP-aware headings" },
+          { label: "Quality", detail: "Citations, plagiarism checks, readability cues" },
+          { label: "Speed", detail: "Drafts in under 90 seconds with export-ready HTML" },
+        ].map((item) => (
+          <Card key={item.label} className="border-2 border-green-100 dark:border-green-900/40">
+            <CardContent className="p-4 space-y-1">
+              <p className="text-xs uppercase tracking-wide text-green-700 dark:text-green-200">{item.label}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{item.detail}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <h2>Top AI Writers Compared</h2>
       <p>
@@ -116,6 +147,19 @@ export default function Page() {
         high‑quality images.  It’s an excellent way to evaluate whether AI content fits into your
         strategy.
       </p>
+
+      <Card className="my-8 border-2 border-blue-100 dark:border-blue-900/40">
+        <CardContent className="p-6 space-y-3">
+          <div className="flex flex-wrap gap-2 text-xs uppercase tracking-wide text-blue-700 dark:text-blue-200">
+            <Badge variant="secondary">Plan-aware word counts</Badge>
+            <Badge variant="secondary">Demo, Free, Pro</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Demo users can safely stretch drafts to ~1,500 words; Free unlocks 2,000-word articles; Pro extends to 6,000-word
+            pillars with richer internal linking and media. The generator UI mirrors these guardrails so you never hit a client-side error while scaling up length.
+          </p>
+        </CardContent>
+      </Card>
 
         <div className="my-12 p-8 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white text-center">
           <p className="text-xl font-semibold mb-4">
