@@ -40,6 +40,30 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const safeHtml = typeof result?.html === "string" ? result.html : ""
+  const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
+  const fallbackMarkdownHtml = safeMarkdown.trim()
+    ? `<p>${safeMarkdown
+        .trim()
+        .replace(/\n{2,}/g, "</p><p>")
+        .replace(/\n/g, "<br />")}</p>`
+    : ""
+  const renderedHtml = safeHtml.trim() ? safeHtml : fallbackMarkdownHtml
+
+  // Bail out early if the payload is missing or malformed instead of throwing.
+  if (!result || typeof result !== "object") {
+    return (
+      <Card className="border-2 border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="text-lg">Preview unavailable</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            We could not render the generated article because the response was incomplete. Please try generating again.
+          </p>
+        </CardHeader>
+      </Card>
+    )
+  }
+
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
     setCopied(label)
@@ -234,16 +258,22 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
           )}
 
           <Card>
-            <CardContent className="p-8">
-              <div
-                className="prose prose-lg dark:prose-invert max-w-none
-                           prose-headings:font-bold prose-headings:gradient-text
-                           prose-p:text-muted-foreground prose-p:leading-relaxed
-                           prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                           prose-img:rounded-lg prose-img:shadow-md
-                           prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
-                dangerouslySetInnerHTML={{ __html: result?.html || "" }}
-              />
+            <CardContent className="p-8 space-y-4">
+              {renderedHtml ? (
+                <div
+                  className="prose prose-lg dark:prose-invert max-w-none
+                             prose-headings:font-bold prose-headings:gradient-text
+                             prose-p:text-muted-foreground prose-p:leading-relaxed
+                             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                             prose-img:rounded-lg prose-img:shadow-md
+                             prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
+                  dangerouslySetInnerHTML={{ __html: renderedHtml }}
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground bg-muted/30">
+                  No previewable HTML was returned. Try generating again or copy the markdown tab to continue editing.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

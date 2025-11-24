@@ -15,6 +15,15 @@ cp .env.example .env.local
 npm run dev  # http://localhost:3000
 ```
 
+## Downloading the packaged frontend
+Generate a fresh, ready-to-deploy archive with:
+
+```bash
+npm run package:zip
+```
+
+The script writes `public/seoscribe-fixed.zip` (excluded from git to avoid binary-only PRs). When the Next.js server is running locally, that file is served at `http://localhost:3000/seoscribe-fixed.zip` for easy download.
+
 ## Deploy
 ```bash
 npm run build

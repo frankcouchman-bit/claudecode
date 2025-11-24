@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { Menu, X, Sparkles, LogOut } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useQuota } from "@/contexts/quota-context"
@@ -16,11 +15,9 @@ export function Header() {
 
   const router = useRouter()
   const { isAuthenticated } = useQuota()
-  // Determine authentication from both quota state and raw token.  This
-  // fallback prevents the header from incorrectly showing "Sign Out" when
-  // the quota context hasn't been initialised yet but a token is present.
-  // Determine authentication solely by checking local tokens.  The quota
-  // state may lag behind when tokens are cleared, so we rely on isAuthed().
+  // Determine authentication solely by checking local tokens. The quota
+  // state may lag behind when tokens are cleared, so we rely on isAuthed()
+  // to avoid showing the wrong action in the header while contexts load.
   const authed = isAuthed()
 
   // Store the authenticated user's email to personalise the header.  We
@@ -51,7 +48,7 @@ export function Header() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm">
+    <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg shadow-sm">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-xl group">
@@ -77,7 +74,6 @@ export function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <ThemeToggle />
           {/* Show Try Demo only when not authenticated */}
           {!authed && (
             <Link href="/article-writer">
@@ -109,7 +105,6 @@ export function Header() {
 
         {/* Mobile Menu Button */}
         <div className="flex md:hidden items-center gap-2">
-          <ThemeToggle />
           <Button
             variant="ghost"
             size="icon"

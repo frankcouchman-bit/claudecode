@@ -9,7 +9,8 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "next lint || true"
+    "lint": "next lint || true",
+    "package:zip": "node scripts/package-frontend.js"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "*",

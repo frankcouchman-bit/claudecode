@@ -30,29 +30,115 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import { ErrorBoundary } from "@/components/error-boundary"
 
-export default function Demo() {
+type DraftResult = Record<string, any> | null
+
+function coerceString(value: unknown): string {
+  if (typeof value === "string") return value
+  if (value === null || value === undefined) return ""
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function normalizeDraftResult(raw: any): DraftResult {
+  if (!raw) return null
+
+  // Accept plain string responses (HTML or markdown) instead of throwing.
+  if (typeof raw === "string") {
+    return {
+      title: "Your Article",
+      topic: "",
+      html: raw,
+      markdown: raw,
+      meta_title: "Your Article",
+      meta_description: "",
+      meta_keywords: [],
+      keywords: [],
+      citations: [],
+      faqs: [],
+      internal_links: [],
+      social_posts: {},
+      image_url: "",
+      seo_score: 0,
+      readability_score: "",
+      word_count: 0,
+    }
+  }
+
+  if (typeof raw !== "object") return null
+
+  const base = typeof raw.data === "object" && raw.data !== null ? raw.data : raw
+
+  const title = base.title || base.topic || "Your Article"
+  const html = coerceString(
+    typeof base.html === "string"
+      ? base.html
+      : typeof base.content === "string"
+        ? base.content
+        : typeof base.markdown === "string"
+          ? base.markdown
+          : ""
+  )
+
+  const markdown = coerceString(base.markdown)
+  const metaKeywords = Array.isArray(base.meta_keywords)
+    ? base.meta_keywords
+    : Array.isArray(base.keywords)
+      ? base.keywords
+      : []
+
+  return {
+    ...base,
+    title,
+    topic: base.topic || base.title || "",
+    html,
+    markdown,
+    meta_title: base.meta_title || title,
+    meta_description: base.meta_description || base.description || "",
+    meta_keywords: metaKeywords,
+    keywords: Array.isArray(base.keywords) ? base.keywords : metaKeywords,
+    citations: Array.isArray(base.citations) ? base.citations.filter(Boolean) : [],
+    faqs: Array.isArray(base.faqs) ? base.faqs.filter(Boolean) : [],
+    internal_links: Array.isArray(base.internal_links)
+      ? base.internal_links.filter((link: any) => link && (link.url || link.anchor_text))
+      : [],
+    social_posts: base.social_posts && typeof base.social_posts === "object" ? base.social_posts : [],
+    image_url: base.image_url || base.image?.image_url || base.image?.image_b64 || "",
+    seo_score: Number(base.seo_score ?? 0) || 0,
+    readability_score: base.readability_score ?? "",
+    word_count: Number(base.word_count ?? base.target_word_count ?? 0) || 0,
+  }
+}
+
+function DemoContent() {
   const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
 
-  // Determine allowed word counts based on plan
-  const wordOptions = (() => {
-    if (!isAuthenticated) return ["1500"]
-    if (quota.plan === 'free') return ["1500", "2000"]
-    // Pro plan
-    return ["1500", "2000", "2500", "3000"]
-  })()
+  // Determine allowed word counts based on plan and surface locked options for clarity
+  const wordOptions = [
+    { value: "1200", label: "1,200 words (demo safe)", allowed: true },
+    { value: "1500", label: "1,500 words (guest/demo)", allowed: true },
+    { value: "2000", label: "2,000 words (Free cap)", allowed: isAuthenticated },
+    { value: "3000", label: "3,000 words (Pro starter)", allowed: isAuthenticated && quota.plan === 'pro' },
+    { value: "4500", label: "4,500 words (Pro long-form)", allowed: isAuthenticated && quota.plan === 'pro' },
+    { value: "6000", label: "6,000 words (Pro max)", allowed: isAuthenticated && quota.plan === 'pro' },
+  ]
 
   // Ensure selected word count remains valid when plan or options change
   useEffect(() => {
-    if (!wordOptions.includes(wordCount)) {
-      setWordCount(wordOptions[wordOptions.length - 1])
+    const highestAllowed = [...wordOptions].reverse().find((opt) => opt.allowed)
+    if (highestAllowed && wordCount !== highestAllowed.value) {
+      setWordCount(highestAllowed.value)
     }
-  }, [quota.plan])
+  }, [quota.plan, isAuthenticated])
   const [topic, setTopic] = useState("")
   const [language, setLanguage] = useState("en")
   const [tone, setTone] = useState("professional")
   // Word count selection; will be constrained by plan
-  const [wordCount, setWordCount] = useState("3000")
+  const [wordCount, setWordCount] = useState("1500")
   // Optional brief/instructions to guide generation
   const [brief, setBrief] = useState("")
   const [loading, setLoading] = useState(false)
@@ -83,7 +169,7 @@ export default function Demo() {
         target_word_count: parseInt(wordCount) || 3000
       })
 
-      const r = await generateDraft({
+      const rawResult = await generateDraft({
         topic: topic.trim(),
         tone: tone,
         language: language,
@@ -96,7 +182,13 @@ export default function Demo() {
         brief: brief.trim() || undefined
       })
 
-      console.log('Generation successful:', r)
+      console.log('Generation successful:', rawResult)
+
+      const normalized = normalizeDraftResult(rawResult)
+
+      if (!normalized) {
+        throw new Error("Unexpected response from the server. Please try again.")
+      }
 
       // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
@@ -107,7 +199,7 @@ export default function Demo() {
         setTimeout(() => syncWithBackend(), 1000)
       }
 
-      setResult(r)
+      setResult(normalized)
     } catch (e: any) {
       console.error('Generation failed:', e)
       const errorMessage = e?.message || "Failed to generate"
@@ -192,7 +284,14 @@ export default function Demo() {
                 </SelectTrigger>
                 <SelectContent>
                   {wordOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>{parseInt(opt).toLocaleString()} words</SelectItem>
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      disabled={!opt.allowed}
+                    >
+                      {opt.label}
+                      {!opt.allowed && " · Pro"}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -214,6 +313,12 @@ export default function Demo() {
                   </>
                 )}
               </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <Badge variant="outline">Demo & guests: up to 1,500 words</Badge>
+              <Badge variant="outline">Free: unlock 2,000-word drafts</Badge>
+              <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">Pro: 6,000-word max</Badge>
             </div>
 
             {/* Optional brief/instructions */}
@@ -302,5 +407,47 @@ export default function Demo() {
       {/* Result Section */}
       {result && !loading && <ArticlePreview result={result} />}
     </div>
+  )
+}
+
+export default function Demo() {
+  const [instanceKey, setInstanceKey] = useState(0)
+
+  return (
+    <ErrorBoundary
+      resetKeys={[instanceKey]}
+      fallbackRender={({ error, resetErrorBoundary }) => (
+        <Card className="border-2 border-red-200 bg-red-50/70">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <CardTitle className="text-xl">Something went wrong</CardTitle>
+            </div>
+            <CardDescription className="text-sm text-muted-foreground">
+              The generator hit a client-side issue. Please try again; your session limits remain safe.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">Details: {error.message}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="gradient-btn text-white"
+                onClick={() => {
+                  setInstanceKey((key) => key + 1)
+                  resetErrorBoundary()
+                }}
+              >
+                Restart generator
+              </Button>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Refresh page
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    >
+      <DemoContent key={instanceKey} />
+    </ErrorBoundary>
   )
 }
