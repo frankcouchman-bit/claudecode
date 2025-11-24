@@ -37,13 +37,72 @@ export async function openPortal(returnUrl?:string){ const res = await fetch(`${
 
 // Tool API endpoints
 // Tool API endpoints updated to match backend worker routes.
-export async function generateHeadlines(payload: { headline: string }){
-  const res = await fetch(`${API_BASE}/api/tools/headline-analyzer`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
-  return handle(res)
+/**
+ * Generate a handful of headline ideas for a given topic.  The backend does not
+ * expose a dedicated "generate headlines" endpoint, so we leverage the
+ * AI assistant endpoint.  We construct a prompt asking for five
+ * compelling article titles on the supplied topic.  The AI assistant
+ * returns suggestions in the `suggestions` array.
+ *
+ * @param payload An object containing a `topic` string.  This value is
+ * included in the prompt as the subject of the headlines.
+ * @returns An object with a `headlines` array of strings.  If the
+ * suggestion list is missing, an empty array is returned.
+ */
+/**
+ * Generate a handful of headline ideas for a given topic or headline.
+ * Accepts either a `topic` or a `headline` property on the payload.
+ * If `topic` is provided it is used as the subject for the prompt;
+ * otherwise the `headline` value is used.  This flexibility avoids
+ * TypeScript errors when callers supply a `headline` key instead of
+ * `topic`.
+ *
+ * The backend does not expose a dedicated headline generator endpoint,
+ * so we leverage the AI assistant.  We request five suggestions
+ * based on the topic/headline.  The assistant returns an array of
+ * suggestions under the `suggestions` key.
+ */
+export async function generateHeadlines(payload: { topic?: string; headline?: string }) {
+  const subject = payload.topic ?? payload.headline ?? ""
+  const prompt = `Generate 5 compelling article headlines for: ${subject}`
+  const body = {
+    prompt,
+    context: "",
+    keyword: subject,
+    region: "",
+  }
+  const res = await fetch(
+    `${API_BASE}/api/ai-assistant`,
+    withAuthHeaders({
+      method: "POST",
+      body: JSON.stringify(body),
+      cache: "no-store",
+    })
+  )
+  const data = await handle(res)
+  return { headlines: (data as any)?.suggestions || [] }
 }
-export async function optimizeMetaTags(payload: { content: string }){
-  const res = await fetch(`${API_BASE}/api/tools/meta-description`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
-  return handle(res)
+export async function optimizeMetaTags(payload: { title: string }) {
+  // Request a meta description for the provided title.  The backend
+  // returns an object with a `description` field.  We derive a meta
+  // title by truncating the input to 60 characters, ensuring it fits
+  // recommended length guidelines.  If the API call fails, the
+  // returned object may not include a description.
+  const res = await fetch(
+    `${API_BASE}/api/tools/meta-description`,
+    withAuthHeaders({
+      method: "POST",
+      body: JSON.stringify({ content: payload.title }),
+      cache: "no-store",
+    })
+  )
+  const data = await handle(res)
+  const rawTitle = String(payload.title || "").trim()
+  const metaTitle = rawTitle.length > 60 ? rawTitle.slice(0, 57).trim() + "…" : rawTitle
+  return {
+    title: metaTitle,
+    description: (data as any)?.description || "",
+  }
 }
 // Suggest internal links by leveraging the keywords API to get keyword clusters.  The caller can derive internal links from this data.
 export async function suggestInternalLinks(payload: { topic: string, text?: string }){

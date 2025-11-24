@@ -86,7 +86,8 @@ export default function ToolsPage() {
 
     setLoading('headlines')
     try {
-      const result = await apiGenerateHeadlines({ topic: headlineInput })
+      // Pass the input as a `headline` property to satisfy the API signature.
+      const result = await apiGenerateHeadlines({ headline: headlineInput })
       setHeadlineResults(result.headlines || [])
     } catch (e: any) {
       setError(e?.message || "Failed to generate headlines")
@@ -146,7 +147,8 @@ export default function ToolsPage() {
 
     setLoading('readability')
     try {
-      const result = await apiAnalyzeReadability({ content: readabilityInput })
+      // Use the `text` field to match the API signature
+      const result = await apiAnalyzeReadability({ text: readabilityInput })
       setReadabilityScore(result.score || 0)
     } catch (e: any) {
       setError(e?.message || "Failed to analyze readability")
@@ -166,7 +168,7 @@ export default function ToolsPage() {
 
     setLoading('brief')
     try {
-      const result = await apiGenerateContentBrief({ topic: briefInput })
+      const result = await apiGenerateContentBrief({ keyword: briefInput })
       setBriefResult(result)
     } catch (e: any) {
       setError(e?.message || "Failed to generate brief")
@@ -186,8 +188,9 @@ export default function ToolsPage() {
 
     setLoading('keywords')
     try {
-      const result = await apiCheckKeywordDensity({ content: keywordInput })
-      setKeywordResults(result.keywords || [])
+      // Send both the topic and the full text to the keyword tool for better clustering
+      const result = await apiCheckKeywordDensity({ topic: keywordInput, text: keywordInput })
+      setKeywordResults(result.keywords || (result.density || []))
     } catch (e: any) {
       setError(e?.message || "Failed to check keyword density")
       setKeywordResults(null)
