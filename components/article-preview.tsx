@@ -60,6 +60,26 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
   const derivedKeywords = deriveKeywords()
 
+  function deriveMetaDescription() {
+    const explicit = typeof result?.meta_description === "string" ? result.meta_description.trim() : ""
+    const looksGeneric = /seo-ready ai article/i.test(explicit)
+    if (explicit && !looksGeneric) return explicit
+
+    const sectionParagraph = Array.isArray(result?.sections)
+      ? (result.sections as any[])
+          .flatMap((s) => (Array.isArray(s?.paragraphs) ? s.paragraphs : []))
+          .find((p) => typeof p === "string" && p.trim().length > 40) || ""
+      : ""
+
+    const summary = typeof result?.summary === "string" ? result.summary : ""
+    const basis = sectionParagraph || summary || explicit
+    if (!basis) return ""
+    const clean = basis.replace(/\s+/g, " ").trim()
+    return clean.length > 155 ? `${clean.slice(0, 152)}…` : clean
+  }
+
+  const derivedMetaDescription = deriveMetaDescription()
+
   function buildHtmlFromSections() {
     const title = result?.title || "SEO-ready article"
     const sections = Array.isArray(result?.sections) ? result.sections : []
@@ -116,25 +136,25 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
   function buildDefaultSocialPosts() {
     const title = result?.title || "Your article"
-    const desc = result?.meta_description || result?.summary || ""
+    const desc = derivedMetaDescription || result?.summary || ""
     const kws = derivedKeywords.slice(0, 6).join(", ")
     const primaryKeyword = derivedKeywords[0] || ""
 
     return [
       {
         platform: "linkedin",
-        content: `${title} — ${desc}\n\n• What readers learn\n• 3-step playbook\n• CTA: See the full guide`.slice(0, 650),
-        hint: "4–6 lines, 1–2 hashtags, finish with a link CTA",
+        content: `${title} — ${desc}\n\n• Pain → promise\n• 3-sentence story\n• Checklist: 3 steps\n• CTA: See the full guide`.slice(0, 650),
+        hint: "4–8 lines, add 1–2 niche hashtags + link CTA",
       },
       {
         platform: "x",
-        content: `Thread hook: ${title} (${primaryKeyword || "SEO"})\n1) Pain/insight\n2) Quick win\n3) Data point\nCTA → link`.slice(0, 280),
-        hint: "Post as 2–3 tweet thread and pin",
+        content: `Thread: ${title}\n1/ Hook (${primaryKeyword || "keyword"})\n2/ Tip + stat\n3/ Mini checklist\n4/ CTA → link`.slice(0, 280),
+        hint: "Pin first tweet, thread 3–6 posts for reach",
       },
       {
         platform: "reddit",
-        content: `Title: ${title}\n\nBody: 2–3 key takeaways, a short checklist, and a genuine question. Cite 1–2 sources from the article.`.slice(0, 950),
-        hint: "Pick the right community (r/SEO, r/Entrepreneur, etc.)",
+        content: `Title: ${title}\n\nBody: Hook in 1 line → 3 insights → question. Include 1 source from the article.`,
+        hint: "Pick the right community (r/SEO, r/Entrepreneur) and keep it conversational",
       },
       {
         platform: "facebook",
@@ -149,7 +169,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
       {
         platform: "tiktok",
         content: `Script: Hook (“${title} in 20s”), 3 punchy tips, stat/quote, CTA to read more. Overlay keywords: ${kws}`.slice(0, 320),
-        hint: "15–20s voiceover with on-screen bullets",
+        hint: "15–20s voiceover with on-screen bullets and keyword overlays",
       },
       {
         platform: "youtube",
@@ -159,7 +179,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
       {
         platform: "email",
         content: `Subject: ${title}\nPreview: ${desc}\nBody: Hook → 3 bullets → CTA → P.S. with related resource`.slice(0, 650),
-        hint: "Fits newsletters or drips",
+        hint: "Fits newsletters or drips; add first-name personalization",
       },
     ]
   }
@@ -333,8 +353,8 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 )}
               </div>
               <CardTitle className="text-3xl mb-2">{result?.title || "Your Article"}</CardTitle>
-              {result?.meta_description && (
-                <p className="text-muted-foreground">{result.meta_description}</p>
+              {derivedMetaDescription && (
+                <p className="text-muted-foreground">{derivedMetaDescription}</p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -491,12 +511,12 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {Array.isArray(result?.keywords) && result.keywords.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {result.keywords.map((keyword: string, i: number) => (
+              {derivedKeywords.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    {derivedKeywords.map((keyword: string, i: number) => (
                       <Badge key={i} variant="secondary">{keyword}</Badge>
                     ))}
-                  </div>
+                </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No keywords extracted</p>
                 )}
@@ -692,11 +712,11 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   </div>
                 </div>
               )}
-              {result?.meta_description && (
+              {derivedMetaDescription && (
                 <div>
                   <label className="text-sm font-semibold">Meta Description</label>
                   <div className="mt-1 p-3 rounded-lg bg-muted/50 border font-mono text-sm">
-                    {result.meta_description}
+                    {derivedMetaDescription}
                   </div>
                 </div>
               )}
