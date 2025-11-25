@@ -817,18 +817,20 @@ function DemoContent() {
       updateQuota(updatedQuota)
       setTimeout(() => syncWithBackend(), 500)
 
-      const mergedSections = mergeSections(
-        Array.isArray(result.sections) ? result.sections : [],
-        Array.isArray(normalized.sections) ? normalized.sections : []
-      )
+      const existingSections = Array.isArray(result.sections) ? result.sections : []
+      const incomingSections = Array.isArray(normalized.sections) ? normalized.sections : []
+      const mergedSections = mergeSections(existingSections, incomingSections)
 
       const mergedFaqs = mergeFaqs(result.faqs || [], normalized.faqs || [])
       const mergedCitations = mergeCitations(result.citations || [], normalized.citations || [])
       const mergedKeywords = Array.from(new Set([...(result.meta_keywords || []), ...(normalized.meta_keywords || [])])).filter(Boolean)
 
+      const existingHtml = result.html || sectionsToHtml(existingSections, result.faqs || [], result.citations || [])
+      const incomingHtml = normalized.html || sectionsToHtml(incomingSections, normalized.faqs || [], normalized.citations || [])
+
       const mergedHtml = ensureHtml(
         sectionsToHtml(mergedSections, mergedFaqs, mergedCitations),
-        `${result.markdown || ""}\n\n${normalized.markdown || ""}`,
+        [existingHtml, incomingHtml, result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
       )
 
       const mergedWordCount = stripTags(mergedHtml || '').split(/\s+/).filter(Boolean).length
