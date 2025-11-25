@@ -60,7 +60,7 @@ export function Features() {
     {
       icon: Globe,
       title: "Multi-Language",
-      desc: "Support for 25+ languages with native-level quality.",
+      desc: "Optimized for English-first output so SERP research and scoring stay accurate.",
       color: "from-pink-500 to-rose-500"
     },
     {

@@ -41,7 +41,12 @@ export default function ToolsPage() {
   const [linkInput, setLinkInput] = useState("")
   const [linkResults, setLinkResults] = useState<any[]>([])
   const [readabilityInput, setReadabilityInput] = useState("")
-  const [readabilityScore, setReadabilityScore] = useState<number | null>(null)
+  const [readabilityMetrics, setReadabilityMetrics] = useState<{
+    score: number
+    flesch_reading_ease?: number
+    flesch_kincaid_grade?: number
+    level?: string
+  } | null>(null)
   const [briefInput, setBriefInput] = useState("")
   const [briefResult, setBriefResult] = useState<any>(null)
   const [keywordInput, setKeywordInput] = useState("")
@@ -152,10 +157,16 @@ export default function ToolsPage() {
     try {
       // Use the `text` field to match the API signature
       const result = await apiAnalyzeReadability({ text: readabilityInput })
-      setReadabilityScore(result.score || 0)
+      const normalized = {
+        score: Number(result?.score ?? result?.flesch_reading_ease ?? 0),
+        flesch_reading_ease: Number(result?.flesch_reading_ease ?? result?.score ?? 0),
+        flesch_kincaid_grade: Number(result?.flesch_kincaid_grade ?? 0),
+        level: result?.level || (result?.score >= 80 ? "Easy" : "Moderate"),
+      }
+      setReadabilityMetrics(normalized)
     } catch (e: any) {
       setError(e?.message || "Failed to analyze readability")
-      setReadabilityScore(null)
+      setReadabilityMetrics(null)
     } finally {
       setLoading(null)
     }
@@ -456,17 +467,33 @@ export default function ToolsPage() {
                 {loading === 'readability' ? 'Analyzing...' : 'Analyze'}
               </Button>
 
-              {readabilityScore !== null && (
-                <div className="p-6 rounded-lg bg-muted/50 border text-center">
-                  <div className="text-5xl font-bold mb-2">{readabilityScore}/100</div>
+              {readabilityMetrics !== null && (
+                <div className="p-6 rounded-lg bg-muted/50 border text-center space-y-4">
+                  <div className="text-5xl font-bold">{Math.round(readabilityMetrics.score)}</div>
                   <p className="text-muted-foreground">
-                    {readabilityScore >= 80 ? 'Excellent!' : readabilityScore >= 60 ? 'Good' : 'Needs improvement'}
+                    {readabilityMetrics.level || (readabilityMetrics.score >= 80 ? 'Excellent' : readabilityMetrics.score >= 60 ? 'Good' : 'Needs improvement')}
                   </p>
-                  <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2 mt-4">
+                  <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2 mt-2">
                     <div
                       className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all"
-                      style={{ width: `${readabilityScore}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, readabilityMetrics.score))}%` }}
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg bg-white/50 dark:bg-white/5 p-3 border">
+                      <p className="font-semibold">Flesch ease</p>
+                      <p className="text-muted-foreground">{readabilityMetrics.flesch_reading_ease?.toFixed(1) || '—'}</p>
+                    </div>
+                    <div className="rounded-lg bg-white/50 dark:bg-white/5 p-3 border">
+                      <p className="font-semibold">FK grade</p>
+                      <p className="text-muted-foreground">{readabilityMetrics.flesch_kincaid_grade?.toFixed(1) || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="text-left text-xs text-muted-foreground space-y-1">
+                    <p>• Keep sentences under 20 words and prefer active voice</p>
+                    <p>• Use clear H2/H3 hierarchy with 3–5 sentence paragraphs</p>
+                    <p>• Swap jargon for concrete examples and numbered steps</p>
+                    <p>• Add bullets for comparisons; trim filler adverbs</p>
                   </div>
                 </div>
               )}

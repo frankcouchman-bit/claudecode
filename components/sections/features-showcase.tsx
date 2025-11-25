@@ -78,10 +78,10 @@ const features = [
   },
   {
     icon: Globe,
-    title: "25+ Languages Supported",
-    description: "Write in English, Spanish, French, German, Japanese, Chinese, and 20+ more languages. AI understands local search intent and cultural context.",
+    title: "English-first Precision",
+    description: "Optimized for English outputs so SERP research, citations, and scoring stay accurate. Translate afterward as needed.",
     color: "from-red-600 to-pink-600",
-    badge: "Multilingual"
+    badge: "Research-accurate"
   },
   {
     icon: TrendingUp,

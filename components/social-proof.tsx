@@ -19,8 +19,8 @@ export function SocialProof() {
     },
     {
       icon: Globe,
-      value: "25+ Languages",
-      label: "Same Quality",
+      value: "English-first",
+      label: "SERP-tuned output",
       color: "from-green-500 to-emerald-500"
     },
     {

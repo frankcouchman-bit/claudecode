@@ -51,8 +51,8 @@ const stats = [
   },
   {
     icon: Globe,
-    value: "25+",
-    label: "Languages Supported",
+    value: "English",
+    label: "SERP-optimized",
     color: "text-blue-600"
   },
   {

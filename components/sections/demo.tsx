@@ -196,13 +196,56 @@ function buildCitations(keywords: string[], topic: string) {
   }))
 }
 
-function buildFallbackHtml(title: string, description: string, keywords: string[], _links: any[], faqs: any[], citations: any[]) {
+function buildFallbackHtml(title: string, description: string, keywords: string[], links: any[], faqs: any[], citations: any[]) {
   const keywordsLine = keywords.length ? `<p><strong>Primary keywords:</strong> ${keywords.join(", ")}</p>` : ""
+  const intro = description ||
+    `Practical, rank-ready guidance for ${title || "your topic"} with step-by-step actions, recent research, and conversion hooks.`
+
+  const bodySections = [
+    {
+      heading: `${title || "Article"}: what matters now`,
+      paragraphs: [
+        intro,
+        "Match search intent first: open with the specific problem, then outline the outcome readers will achieve. Weave in 2–3 supporting stats to build trust.",
+      ],
+    },
+    {
+      heading: "Actionable playbook",
+      paragraphs: [
+        "Lay out the repeatable steps: research competitors, map subtopics, draft H2/H3s, add internal links, and finish with meta data. Keep sentences tight (12–18 words).",
+        "Close every major section with a micro-CTA (demo, checklist download, or related guide) to increase engagement and dwell time.",
+      ],
+    },
+    {
+      heading: "On-page SEO checks",
+      paragraphs: [
+        "Validate meta title/description length, add descriptive alt text, compress hero media, and ensure your primary keyword is in the first 120 words.",
+        "Add 3–5 authoritative citations plus internal links to adjacent guides to strengthen E-E-A-T and crawlability.",
+      ],
+    },
+    {
+      heading: "Conclusion and next steps",
+      paragraphs: [
+        "Summarize the top wins, restate the outcome, and present the clearest next action. Encourage readers to extend the article to the maximum word allowance for deeper topical authority.",
+      ],
+    },
+  ]
+
   const faqsHtml = faqs
     .map((faq: any) => `<div><h3>${faq.question}</h3><p>${faq.answer}</p></div>`)
     .join("")
   const citationsHtml = citations
     .map((c: any) => `<li><a href="${c.url}" rel="noopener" target="_blank">${c.title}</a></li>`)
+    .join("")
+  const linksHtml = Array.isArray(links) && links.length
+    ? `<section><h2>Suggested internal links</h2><ul>${links
+        .slice(0, 6)
+        .map((l: any) => `<li><a href="${l.url}">${l.anchor_text || l.url}</a></li>`)
+        .join("")}</ul></section>`
+    : ""
+
+  const sectionsHtml = bodySections
+    .map((section) => `<section><h2>${section.heading}</h2>${section.paragraphs.map((p) => `<p>${p}</p>`).join("")}</section>`)
     .join("")
 
   return `
@@ -210,20 +253,11 @@ function buildFallbackHtml(title: string, description: string, keywords: string[
       <header>
         <p class="text-sm text-slate-500">SEO-ready draft</p>
         <h1>${title}</h1>
-        <p>${description}</p>
+        <p>${intro}</p>
         ${keywordsLine}
       </header>
-      <section>
-        <h2>Evergreen SEO expansion</h2>
-        <p>Use this scaffold to stretch the article into a 3,000–5,000 word pillar.</p>
-        <ul>
-          <li>Intent & topical map with comparisons</li>
-          <li>Research narrative and methodology</li>
-          <li>Distribution, repurposing, and CTAs</li>
-          <li>Refresh cadence and QA checklist</li>
-          <li>Conversion accelerators and templates</li>
-        </ul>
-      </section>
+      ${sectionsHtml}
+      ${linksHtml}
       <section>
         <h2>Frequently asked questions</h2>
         ${faqsHtml}
@@ -238,34 +272,33 @@ function buildFallbackHtml(title: string, description: string, keywords: string[
 
 function buildFallbackSections(title: string, summary: string, keywords: string[]) {
   const primary = title || "SEO-ready article"
-  const keywordLine = keywords.length ? keywords.slice(0, 5).join(", ") : "search intent"
+  const keywordLine = keywords.length ? keywords.slice(0, 6).join(", ") : "your target query"
   return [
     {
-      heading: `${primary}: key takeaways`,
+      heading: `${primary}: why it matters`,
       paragraphs: [
-        summary || `This article unpacks ${primary} with clear, rank-ready advice tailored to the query.`,
-        `We target: ${keywordLine}. Expect concise, example-rich explanations tuned for modern SERP expectations.`,
+        summary || `A comprehensive guide to ${primary} with modern best practices and proof points.`,
+        `Core focus: ${keywordLine}. Hook readers with a problem-first intro, then outline the promise and outcome in the first 120 words.`,
       ],
     },
     {
-      heading: "Step-by-step playbook",
+      heading: "Research-backed strategy",
       paragraphs: [
-        "Follow this ordered workflow: research the intent, map subtopics, draft persuasive H2/H3s, and weave in internal links.",
-        "Each section should stay skimmable with short paragraphs, bullet lists where helpful, and concrete examples for credibility.",
+        "Compare the top-ranking approaches, highlight gaps you’ll fill, and cite at least three authoritative sources published within the last 12 months.",
+        "Add specific examples or mini case studies to make each section actionable and credible.",
       ],
     },
     {
-      heading: "Optimization checklist",
+      heading: "Implementation blueprint",
       paragraphs: [
-        "Double-check meta title/description, URL slugs, alt text, schema readiness, and accessibility before publishing.",
-        "Add 3–5 authoritative citations plus 3+ internal links to pillar or supporting resources to strengthen E-E-A-T.",
+        "Lay out the step-by-step process (H2/H3) with checklists, bullets, and inline CTAs. Keep sentences concise and scannable for mobile readers.",
+        "Include internal links to related guides, FAQs for objections, and a conversion offer tied to the user’s intent.",
       ],
     },
     {
-      heading: "Conclusion and next steps",
+      heading: "Optimization and next steps",
       paragraphs: [
-        "Summarize the highest-impact actions and offer 1–2 calls to action (demo, newsletter, or related guide).",
-        "Invite readers to extend the article to the maximum plan length for deeper coverage and improved topical authority.",
+        "Validate meta data, schema, load time, and accessibility. Encourage readers to extend the article to the plan’s maximum word allowance for topical depth.",
       ],
     },
   ]
@@ -712,7 +745,8 @@ function DemoContent() {
         article_id: rawResult?.article_id || result.article_id,
         markdown: [result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
         html: mergedHtml,
-        word_count: (result.word_count || 0) + (normalized.word_count || 0),
+        image_url: normalized.image_url || result.image_url || result.image?.image_url || "",
+        word_count: normalized.word_count || result.word_count || 0,
       })
     } catch (e: any) {
       setError(e?.message || "Failed to extend draft")
@@ -753,24 +787,10 @@ function DemoContent() {
               <Select value={language} onValueChange={setLanguage} disabled={loading}>
                 <SelectTrigger className="h-12">
                   <Globe className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Language" />
+                  <SelectValue placeholder="English only" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Spanish</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                  <SelectItem value="de">German</SelectItem>
-                  <SelectItem value="pt">Portuguese</SelectItem>
-                  <SelectItem value="it">Italian</SelectItem>
-                  <SelectItem value="nl">Dutch</SelectItem>
-                  <SelectItem value="pl">Polish</SelectItem>
-                  <SelectItem value="ru">Russian</SelectItem>
-                  <SelectItem value="ja">Japanese</SelectItem>
-                  <SelectItem value="ko">Korean</SelectItem>
-                  <SelectItem value="zh">Chinese</SelectItem>
-                  <SelectItem value="ar">Arabic</SelectItem>
-                  <SelectItem value="hi">Hindi</SelectItem>
-                  <SelectItem value="tr">Turkish</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -879,7 +899,7 @@ function DemoContent() {
             <div className="flex flex-wrap gap-4 text-muted-foreground">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>25+ languages</span>
+                <span>English-first, research-backed</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />

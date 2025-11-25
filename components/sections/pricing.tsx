@@ -16,11 +16,11 @@ export function Pricing() {
       description: "Perfect for trying out SEOScribe",
       features: [
         "1 article per week",
-        "1 tool use per week",
+        "1 tool use per day",
         "AI-generated hero images",
         "Basic SERP research",
         "Export to Markdown",
-        "25+ languages",
+        "English-first output",
         "Community support"
       ],
       cta: "Start Free",
@@ -33,16 +33,15 @@ export function Pricing() {
       period: "per month",
       description: "Everything you need to dominate SERPs",
       features: [
-        "10 articles per day",
-        "5 tool uses per day",
+        "5 articles per day",
+        "10 tool uses per day",
         "AI-generated hero images",
         "Advanced SERP research",
         "Auto citations & FAQs",
-        "25+ languages",
+        "English-first output",
         "Internal link suggestions",
         "Priority support",
-        "Advanced analytics",
-        "API access"
+        "Advanced analytics"
       ],
       cta: "Get Started",
       popular: true,

@@ -22,7 +22,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: "What do I get with each article generation?",
-    answer: "Every article includes: (1) Complete long-form content (1500-3000+ words) written in your chosen tone and language, (2) SEO-optimized meta title and description, (3) 5-10 relevant keywords with density analysis, (4) 3-5 credible citations with sources, (5) FAQ section with schema markup, (6) 5-10 internal linking suggestions, (7) Social media posts for promotion, (8) AI-generated featured image, (9) Readability and SEO score, (10) Both HTML and Markdown formats. Everything is publication-ready."
+    answer: "Every article includes: (1) Complete long-form content (1,500–3,000 words) written in your chosen tone, (2) SEO-optimized meta title and description, (3) 5-10 relevant keywords with density analysis, (4) 3-5 credible citations with sources, (5) FAQ section with schema markup, (6) 5-10 internal linking suggestions, (7) Social media posts for promotion, (8) AI-generated featured image, (9) Readability and SEO score, (10) Both HTML and Markdown formats. Everything is publication-ready."
   },
   {
     question: "Do the articles actually rank on Google?",
@@ -30,11 +30,11 @@ const faqs: FAQItem[] = [
   },
   {
     question: "What's included in the Free plan?",
-    answer: "The Free plan gives you 1 complete article per week (not just 10,000 words—a full article with all SEO features). You also get 1 SEO tool usage per week (headline generator, meta tag optimizer, readability analyzer, etc.). No credit card required. It's perfect for bloggers, freelancers, or anyone who wants to test the quality before upgrading. Free users get the same quality as Pro—just with usage limits."
+    answer: "The Free plan gives you 1 complete article per week (not just 10,000 words—a full article with all SEO features). You also get 1 SEO tool usage per day (headline generator, meta tag optimizer, readability analyzer, etc.). No credit card required. It's perfect for bloggers, freelancers, or anyone who wants to test the quality before upgrading. Free users get the same quality as Pro—just with usage limits."
   },
   {
     question: "What's the difference between Free and Pro plans?",
-    answer: "Free plan: 1 article/week + 1 tool/week. Pro plan ($24/month): 10 articles/day + 5 tools/day + unlimited revisions + priority generation + saved article library + bulk export. Pro is designed for agencies, content teams, and serious marketers who need to scale content production. Both plans get the same AI quality, SERP research, and full SEO optimization."
+    answer: "Free plan: 1 article/week + 1 tool/day. Pro plan ($24/month): 5 articles/day + 10 tools/day + priority generation + saved article library + bulk export. Pro is designed for agencies, content teams, and serious marketers who need to scale content production. Both plans get the same AI quality, SERP research, and full SEO optimization."
   },
   {
     question: "Can I edit the articles after they're generated?",
@@ -42,7 +42,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: "What languages are supported?",
-    answer: "SEOScribe supports 25+ languages including English, Spanish, French, German, Italian, Portuguese, Dutch, Russian, Japanese, Chinese (Simplified & Traditional), Korean, Arabic, Hindi, and more. The AI writes naturally in each language and understands local search intent. Meta tags, citations, and SEO optimization work across all languages."
+    answer: "SEOScribe is optimized for English-first output to keep SERP research, citations, and scoring accurate. You can still paste other languages, but the most reliable rankings and on-page checks come from English drafts."
   },
   {
     question: "How do the SEO tools work?",

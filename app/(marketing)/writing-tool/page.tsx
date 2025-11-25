@@ -70,7 +70,7 @@ export default function Page() {
     },
     {
       question: "Do the tools work for non-English content?",
-      answer: "Yes! Most tools support 25+ languages including Spanish, French, German, Portuguese, and more. Some advanced features work best in English but all core functionality is multilingual."
+      answer: "Our tools are tuned for English to keep SERP research and scoring accurate. You can still paste other languages, but the most reliable outputs and scores are English-first."
     }
   ]
 

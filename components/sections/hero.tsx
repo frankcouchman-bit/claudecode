@@ -212,12 +212,12 @@ export function Hero() {
               >
                 <Globe className="w-6 h-6 text-white" />
               </motion.div>
-              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
-                25+ Languages
-              </div>
-              <div className="text-sm text-muted-foreground mt-2 font-medium">Global content creation</div>
-              <div className="text-xs text-muted-foreground mt-1">Same quality, any language</div>
-            </motion.div>
+                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                  English-first output
+                </div>
+                <div className="text-sm text-muted-foreground mt-2 font-medium">SERP-tuned generation</div>
+                <div className="text-xs text-muted-foreground mt-1">Optimized for research accuracy</div>
+              </motion.div>
           </motion.div>
         </div>
       </div>

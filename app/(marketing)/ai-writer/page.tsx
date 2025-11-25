@@ -59,14 +59,14 @@ export default function Page() {
   ]
 
   const features = [
-    "GPT-4 powered AI engine",
-    "50+ content templates",
-    "25+ languages supported",
+    "Research-backed, English-first drafting",
+    "Template presets for blogs, briefs, and posts",
     "Tone & style customization",
     "Plagiarism-free guarantee",
     "SEO optimization built-in",
-    "Unlimited revisions",
-    "Team collaboration tools"
+    "Auto citations, FAQs, and hero images",
+    "Export to HTML and Markdown",
+    "Collaboration-ready links"
   ]
 
   const faqs = [
@@ -88,7 +88,7 @@ export default function Page() {
     },
     {
       question: "Does it support languages other than English?",
-      answer: "Yes! Our AI Writer supports 25+ languages including Spanish, French, German, Portuguese, Italian, Dutch, and more. The quality is near-native level across all supported languages."
+      answer: "Our generation pipeline is optimized for English to keep SEO quality and research fidelity high. You can still add your own translations, but the best results come from English drafts."
     },
     {
       question: "Will the content be unique and plagiarism-free?",
@@ -100,7 +100,7 @@ export default function Page() {
     },
     {
       question: "What's the difference between free and pro plans?",
-      answer: "Free plan includes 1 article per week and 1 tool per week with AI-generated hero images and basic features. Pro plan ($24/mo) offers 10 articles per day, 5 tools per day, advanced AI models, priority support, team features, and API access."
+      answer: "Free includes 1 article per week and 1 tool per day with AI hero images and core SEO data. Pro ($24/mo) unlocks 5 articles per day, 10 tool runs per day, stronger research, and faster support."
     }
   ]
 
@@ -179,7 +179,7 @@ export default function Page() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span>25+ languages</span>
+                <span>English-first accuracy</span>
               </div>
             </motion.div>
           </div>

@@ -83,8 +83,8 @@ export default function Page(){
     },
     {
       icon: Globe,
-      title: "25+ Languages",
-      description: "Same quality in any language"
+      title: "English-first quality",
+      description: "Optimized for SERP research and scoring"
     },
     {
       icon: Zap,

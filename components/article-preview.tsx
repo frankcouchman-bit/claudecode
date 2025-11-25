@@ -336,12 +336,14 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               {renderedHtml ? (
                 <div
                   className="prose prose-lg dark:prose-invert max-w-none
-                             prose-headings:font-bold prose-headings:gradient-text
-                             prose-h1:text-4xl prose-h1:font-black prose-h2:text-2xl prose-h2:font-semibold prose-h3:text-xl
-                             prose-p:text-muted-foreground prose-p:leading-relaxed
+                             prose-headings:font-bold prose-headings:gradient-text prose-headings:tracking-tight
+                             prose-h1:text-4xl prose-h1:font-black prose-h1:mb-4
+                             prose-h2:text-3xl prose-h2:font-semibold prose-h2:mt-8 prose-h2:border-b prose-h2:border-muted/60 prose-h2:pb-2
+                             prose-h3:text-2xl prose-h3:font-semibold prose-h3:mt-6
+                             prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-[17px]
                              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                              prose-img:rounded-lg prose-img:shadow-md
-                             prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
+                             prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-strong:text-foreground"
                   dangerouslySetInnerHTML={{ __html: renderedHtml }}
                 />
               ) : (

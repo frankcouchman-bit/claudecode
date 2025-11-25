@@ -1,1 +1,1 @@
-export function Logos(){return (<section className='py-10 border-y'><div className='container opacity-70 text-sm'><div className='flex items-center justify-center gap-10 flex-wrap'><span>Embedded FAQs & Citations | AI Images Included | 25+ Languages</span></div></div></section>)}
+export function Logos(){return (<section className='py-10 border-y'><div className='container opacity-70 text-sm'><div className='flex items-center justify-center gap-10 flex-wrap'><span>Embedded FAQs & Citations | AI Images Included | English-first SERP Research</span></div></div></section>)}
