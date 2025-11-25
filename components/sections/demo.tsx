@@ -504,7 +504,10 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
   const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, normalizedMetaKeywords, internalLinks, faqs, citations))
   const textForCount = stripTags(safeHtml || markdownRaw)
   const generatedCount = base.word_count || base.target_word_count || (textForCount ? textForCount.split(/\s+/).length : 0)
-  const wordCount = context.baseWordCount ? context.baseWordCount + generatedCount : generatedCount
+  const wordCount = context.baseWordCount
+    ? // If the model returns the full article again, trust the generated count instead of double-adding the base.
+      (generatedCount >= context.baseWordCount ? generatedCount : context.baseWordCount + generatedCount)
+    : generatedCount
 
   const socialPosts = (() => {
     const rawSocial = base.social_posts
@@ -559,6 +562,82 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     word_count: Number(wordCount) || 0,
     article_id: base.article_id || base.articleId || base.id || base.uuid || base._id || null,
   }
+}
+
+function mergeSections(existing: any[] = [], incoming: any[] = []) {
+  const merged: any[] = []
+  const seen = new Map<string, number>()
+
+  const normalizeHeading = (h: string) => (h || "").trim().toLowerCase()
+  const pushSection = (section: any, appendOnly = false) => {
+    if (!section) return
+    const heading = normalizeHeading(section.heading || section.title || "")
+    const paragraphs = Array.isArray(section.paragraphs) ? section.paragraphs.filter(Boolean).map(coerceString) : []
+
+    if (!heading && paragraphs.length === 0) return
+
+    if (seen.has(heading) && heading) {
+      const idx = seen.get(heading)!
+      const current = merged[idx]
+      const existingParas = new Set((current.paragraphs || []).map((p: string) => p.trim()))
+      const nextParas = appendOnly ? paragraphs : [...current.paragraphs, ...paragraphs]
+      current.paragraphs = nextParas.filter((p: string) => {
+        const key = p.trim()
+        if (!key) return false
+        if (existingParas.has(key)) return false
+        existingParas.add(key)
+        return true
+      })
+      merged[idx] = current
+      return
+    }
+
+    const cleaned = {
+      heading: heading || section.heading || section.title || "",
+      paragraphs,
+    }
+    merged.push(cleaned)
+    seen.set(heading, merged.length - 1)
+  }
+
+  existing.forEach((section) => pushSection(section))
+  incoming.forEach((section) => pushSection(section, true))
+
+  return merged
+}
+
+function mergeFaqs(existing: any[] = [], incoming: any[] = []) {
+  const seen = new Set<string>()
+  const out: any[] = []
+  const add = (faq: any) => {
+    const q = coerceString(faq?.question || faq?.q).trim()
+    const a = coerceString(faq?.answer || faq?.a).trim()
+    if (!q || !a) return
+    const key = q.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push({ question: q, answer: a })
+  }
+  existing.forEach(add)
+  incoming.forEach(add)
+  return out
+}
+
+function mergeCitations(existing: any[] = [], incoming: any[] = []) {
+  const seen = new Set<string>()
+  const out: any[] = []
+  const add = (c: any) => {
+    const url = coerceString(c?.url).trim()
+    const title = coerceString(c?.title || c?.label || c?.source).trim()
+    if (!url && !title) return
+    const key = url || title
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push({ url, title: title || url || "Source" })
+  }
+  existing.forEach(add)
+  incoming.forEach(add)
+  return out
 }
 
 function DemoContent() {
@@ -738,25 +817,36 @@ function DemoContent() {
       updateQuota(updatedQuota)
       setTimeout(() => syncWithBackend(), 500)
 
-      const mergedSections = [
-        ...(Array.isArray(result.sections) ? result.sections : []),
-        ...(Array.isArray(normalized.sections) ? normalized.sections : []),
-      ]
+      const mergedSections = mergeSections(
+        Array.isArray(result.sections) ? result.sections : [],
+        Array.isArray(normalized.sections) ? normalized.sections : []
+      )
+
+      const mergedFaqs = mergeFaqs(result.faqs || [], normalized.faqs || [])
+      const mergedCitations = mergeCitations(result.citations || [], normalized.citations || [])
+      const mergedKeywords = Array.from(new Set([...(result.meta_keywords || []), ...(normalized.meta_keywords || [])])).filter(Boolean)
 
       const mergedHtml = ensureHtml(
-        `${result.html || ""}\n\n${normalized.html || ""}`,
+        sectionsToHtml(mergedSections, mergedFaqs, mergedCitations),
         `${result.markdown || ""}\n\n${normalized.markdown || ""}`,
       )
+
+      const mergedWordCount = stripTags(mergedHtml || '').split(/\s+/).filter(Boolean).length
 
       setResult({
         ...result,
         ...normalized,
         sections: mergedSections,
+        faqs: mergedFaqs,
+        citations: mergedCitations,
+        meta_keywords: mergedKeywords,
+        keywords: mergedKeywords,
         article_id: rawResult?.article_id || result.article_id,
         markdown: [result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
         html: mergedHtml,
         image_url: normalized.image_url || result.image_url || result.image?.image_url || "",
-        word_count: normalized.word_count || result.word_count || 0,
+        word_count: mergedWordCount || normalized.word_count || result.word_count || 0,
+        reading_time_minutes: Math.max(1, Math.round((mergedWordCount || normalized.word_count || result.word_count || 0) / 220)),
       })
     } catch (e: any) {
       setError(e?.message || "Failed to extend draft")
