@@ -42,14 +42,57 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [socialEdits, setSocialEdits] = useState<Record<string, string>>({})
+  const [heroImage, setHeroImage] = useState<string | null>(result?.image_url || null)
+
+  useEffect(() => {
+    // Keep the last valid hero image across extensions so the preview never blanks
+    if (result?.image_url) {
+      setHeroImage(result.image_url)
+    }
+  }, [result?.image_url])
+
+  function deriveKeywords() {
+    if (Array.isArray(result?.meta_keywords) && result.meta_keywords.length) return result.meta_keywords
+    if (Array.isArray(result?.keywords) && result.keywords.length) return result.keywords
+    if (Array.isArray(result?.seo_keywords) && result.seo_keywords.length) return result.seo_keywords
+    return [] as string[]
+  }
+
+  const derivedKeywords = deriveKeywords()
+
+  function buildHtmlFromSections() {
+    const title = result?.title || "SEO-ready article"
+    const sections = Array.isArray(result?.sections) ? result.sections : []
+    const faqs = Array.isArray(result?.faqs) ? result.faqs : []
+    const citations = Array.isArray(result?.citations) ? result.citations : []
+
+    if (!sections.length && !faqs.length && !citations.length) return ""
+
+    const sectionHtml = sections
+      .map((section: any) => {
+        if (!section?.heading && !section?.paragraphs?.length) return ""
+        const paragraphs = (section.paragraphs || []).map((p: string) => `<p>${sanitizeHtml(p)}</p>`).join("\n")
+        const heading = section.heading ? `<h2>${sanitizeHtml(section.heading)}</h2>` : ""
+        return `<section>${heading}${paragraphs}</section>`
+      })
+      .join("\n")
+
+    const faqHtml = faqs.length
+      ? ["<h2>FAQs</h2>", ...faqs.map((f: any) => `<h3>${sanitizeHtml(f.q)}</h3><p>${sanitizeHtml(f.a)}</p>`)].join("\n")
+      : ""
+
+    const citationHtml = citations.length
+      ? ["<h2>Sources & Citations</h2>", `<ul>${citations
+          .map((c: any) => `<li><a href="${c.url}" target="_blank" rel="noopener noreferrer">${sanitizeHtml(c.title || c.url)}</a></li>`)
+          .join("\n")}</ul>`].join("\n")
+      : ""
+
+    return [`<h1>${sanitizeHtml(title)}</h1>`, sectionHtml, faqHtml, citationHtml].filter(Boolean).join("\n")
+  }
 
   const titleIdeas = (() => {
     const primary = result?.title || "SEO Article"
-    const keywords: string[] = Array.isArray(result?.meta_keywords) && result.meta_keywords.length
-      ? result.meta_keywords
-      : Array.isArray(result?.keywords)
-        ? result.keywords
-        : []
+    const keywords: string[] = derivedKeywords
 
     const alternates = Array.isArray(result?.alternative_titles) ? result.alternative_titles.filter(Boolean) : []
     const year = new Date().getFullYear()
@@ -71,13 +114,67 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     })
   })()
 
+  function buildDefaultSocialPosts() {
+    const title = result?.title || "Your article"
+    const desc = result?.meta_description || result?.summary || ""
+    const kws = derivedKeywords.slice(0, 6).join(", ")
+
+    return [
+      {
+        platform: "linkedin",
+        content: `${title} — key takeaways, a 3-step playbook, and a CTA to try it on your site. ${desc}`.slice(0, 500),
+        hint: "4–6 lines, add 1–2 hashtags and a CTA link",
+      },
+      {
+        platform: "x",
+        content: `${title}: ${desc} | Thread: hook → 3 bullets → CTA. Keywords: ${kws}`.slice(0, 260),
+        hint: "Pin as a 2–3 tweet thread for reach",
+      },
+      {
+        platform: "reddit",
+        content: `Title: ${title}\n\nBody: Key insight 1 → Key insight 2 → Checklist → Ask for feedback. Cite 1–2 sources from the article.`.slice(0, 900),
+        hint: "Pick a relevant community (e.g., r/SEO, r/marketing)",
+      },
+      {
+        platform: "facebook",
+        content: `${title} — ${desc}. Add a 2-line summary, 3 bullet takeaways, and a CTA to read more.`.slice(0, 500),
+        hint: "Short paragraphs + single link",
+      },
+      {
+        platform: "instagram",
+        content: `${title} ✨ ${desc}. Carousel idea: hook, 3 tips, CTA slide.`.slice(0, 350),
+        hint: "Add 5–8 niche hashtags",
+      },
+      {
+        platform: "tiktok",
+        content: `Hook: “${title} in 20 seconds.” Bullet 3 tips, show stat, CTA to the article. Script: intro → tips → CTA.`.slice(0, 300),
+        hint: "15–20 second voiceover",
+      },
+      {
+        platform: "youtube",
+        content: `${title} — describe the value, list timestamps for 3 key moments, end with a CTA to the full article.`.slice(0, 500),
+        hint: "Add 3–5 keywords in description",
+      },
+      {
+        platform: "email",
+        content: `Subject: ${title}\nPreview: ${desc}\nBody: Hook → 3 bullets → CTA + P.S. with related resource.`.slice(0, 600),
+        hint: "Great for newsletter snippets",
+      },
+    ]
+  }
+
   const socialPostsList: { platform: string; content: string; hint?: string }[] = (() => {
     const sp = result?.social_posts
     if (Array.isArray(sp)) return sp as any
     if (sp && typeof sp === "object") {
-      return Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
+      const mapEntries = Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
+      const withHints = mapEntries.map((entry: any) => {
+        const hintFallback = buildDefaultSocialPosts().find((p) => p.platform === entry.platform)?.hint
+        return { ...entry, hint: entry?.hint || hintFallback }
+      })
+      return withHints
     }
-    return []
+    return buildDefaultSocialPosts()
   })()
 
   useEffect(() => {
@@ -91,7 +188,8 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const safeHtml = ensureHtml(result?.html, result?.content)
   const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
   const fallbackMarkdownHtml = sanitizeHtml(safeMarkdown)
-  const renderedHtml = safeHtml || fallbackMarkdownHtml
+  const synthesizedHtml = buildHtmlFromSections()
+  const renderedHtml = safeHtml || fallbackMarkdownHtml || synthesizedHtml
 
   // Bail out early if the payload is missing or malformed instead of throwing.
   if (!result || typeof result !== "object") {
@@ -310,7 +408,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
         {/* Preview Tab */}
         <TabsContent value="preview" className="space-y-6">
-          {result?.image_url && (
+          {heroImage && (
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -323,7 +421,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardHeader>
               <CardContent>
                 <img
-                  src={result.image_url}
+                  src={heroImage}
                   alt={result.title || 'Article hero image'}
                   className="w-full h-auto rounded-lg shadow-md"
                 />
