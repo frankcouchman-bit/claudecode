@@ -118,47 +118,48 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     const title = result?.title || "Your article"
     const desc = result?.meta_description || result?.summary || ""
     const kws = derivedKeywords.slice(0, 6).join(", ")
+    const primaryKeyword = derivedKeywords[0] || ""
 
     return [
       {
         platform: "linkedin",
-        content: `${title} — key takeaways, a 3-step playbook, and a CTA to try it on your site. ${desc}`.slice(0, 500),
-        hint: "4–6 lines, add 1–2 hashtags and a CTA link",
+        content: `${title} — ${desc}\n\n• What readers learn\n• 3-step playbook\n• CTA: See the full guide`.slice(0, 650),
+        hint: "4–6 lines, 1–2 hashtags, finish with a link CTA",
       },
       {
         platform: "x",
-        content: `${title}: ${desc} | Thread: hook → 3 bullets → CTA. Keywords: ${kws}`.slice(0, 260),
-        hint: "Pin as a 2–3 tweet thread for reach",
+        content: `Thread hook: ${title} (${primaryKeyword || "SEO"})\n1) Pain/insight\n2) Quick win\n3) Data point\nCTA → link`.slice(0, 280),
+        hint: "Post as 2–3 tweet thread and pin",
       },
       {
         platform: "reddit",
-        content: `Title: ${title}\n\nBody: Key insight 1 → Key insight 2 → Checklist → Ask for feedback. Cite 1–2 sources from the article.`.slice(0, 900),
-        hint: "Pick a relevant community (e.g., r/SEO, r/marketing)",
+        content: `Title: ${title}\n\nBody: 2–3 key takeaways, a short checklist, and a genuine question. Cite 1–2 sources from the article.`.slice(0, 950),
+        hint: "Pick the right community (r/SEO, r/Entrepreneur, etc.)",
       },
       {
         platform: "facebook",
-        content: `${title} — ${desc}. Add a 2-line summary, 3 bullet takeaways, and a CTA to read more.`.slice(0, 500),
-        hint: "Short paragraphs + single link",
+        content: `${title}\n\n${desc}\n• Tip 1\n• Tip 2\n• Tip 3\nCTA: Read the full guide`.slice(0, 600),
+        hint: "Keep it scannable with bullets and one link",
       },
       {
         platform: "instagram",
-        content: `${title} ✨ ${desc}. Carousel idea: hook, 3 tips, CTA slide.`.slice(0, 350),
-        hint: "Add 5–8 niche hashtags",
+        content: `${title} ✨ ${desc}\nHook → 3 tips → CTA slide. Include niche hashtags: ${kws}`.slice(0, 450),
+        hint: "Great as a carousel caption",
       },
       {
         platform: "tiktok",
-        content: `Hook: “${title} in 20 seconds.” Bullet 3 tips, show stat, CTA to the article. Script: intro → tips → CTA.`.slice(0, 300),
-        hint: "15–20 second voiceover",
+        content: `Script: Hook (“${title} in 20s”), 3 punchy tips, stat/quote, CTA to read more. Overlay keywords: ${kws}`.slice(0, 320),
+        hint: "15–20s voiceover with on-screen bullets",
       },
       {
         platform: "youtube",
-        content: `${title} — describe the value, list timestamps for 3 key moments, end with a CTA to the full article.`.slice(0, 500),
-        hint: "Add 3–5 keywords in description",
+        content: `${title} — value prop, who it's for, bullet timestamps (00:10, 01:20, 02:40), CTA to full article. Keywords: ${kws}`.slice(0, 700),
+        hint: "Add 3–5 keywords + link in first lines",
       },
       {
         platform: "email",
-        content: `Subject: ${title}\nPreview: ${desc}\nBody: Hook → 3 bullets → CTA + P.S. with related resource.`.slice(0, 600),
-        hint: "Great for newsletter snippets",
+        content: `Subject: ${title}\nPreview: ${desc}\nBody: Hook → 3 bullets → CTA → P.S. with related resource`.slice(0, 650),
+        hint: "Fits newsletters or drips",
       },
     ]
   }
@@ -189,7 +190,14 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
   const fallbackMarkdownHtml = sanitizeHtml(safeMarkdown)
   const synthesizedHtml = buildHtmlFromSections()
-  const renderedHtml = safeHtml || fallbackMarkdownHtml || synthesizedHtml
+
+  const hasHeading = (html: string | undefined | null) =>
+    typeof html === "string" ? /<h[1-3][^>]*>/i.test(html) : false
+
+  // Prefer synthesized HTML with real headings if the upstream HTML/markdown lacks H tags
+  const primaryHtml = hasHeading(safeHtml) ? safeHtml : undefined
+  const markdownHtml = hasHeading(fallbackMarkdownHtml) ? fallbackMarkdownHtml : undefined
+  const renderedHtml = primaryHtml || markdownHtml || synthesizedHtml || fallbackMarkdownHtml || safeHtml
 
   // Bail out early if the payload is missing or malformed instead of throwing.
   if (!result || typeof result !== "object") {
