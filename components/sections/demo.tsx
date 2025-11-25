@@ -125,35 +125,45 @@ function buildSocialPosts(title: string, summary: string, keywords: string[]) {
   return [
     {
       platform: "LinkedIn",
-      content: `${hero}: long-form breakdown with ${primary || "search intent"}. Add a carousel of the 3 strongest takeaways and close with a demo invite. ${base}`,
-      hint: "Use a 6–8 line post for reach",
+      content: `${hero}: long-form breakdown with ${primary || "search intent"}. Lead with a 2-line hook, drop 3 bullet takeaways, add a CTA to read + comment your biggest win. ${base}`,
+      hint: "Use a 6–8 line post and ask for comments",
     },
     {
       platform: "X / Twitter",
-      content: `${hero} — thread: hook, 3 key tactics, 2 fresh stats, 1 CTA. Tag #SEO #ContentMarketing for visibility.`,
-      hint: "Break into 3–5 tweets",
+      content: `${hero} — thread: hook, 3 key tactics, 2 fresh stats, 1 CTA. Start with a bold promise, keep lines <240 chars, end with a link + ask to RT. #SEO #ContentMarketing`,
+      hint: "Break into 4–6 tweets for reach",
     },
     {
       platform: "Reddit",
-      content: `${hero} — summarize the unique angle and invite feedback. Share in r/SEO, r/Entrepreneur, or niche communities with a question about ${primary || "your niche"}.`,
-      hint: "Add the best-fit subreddit",
+      content: `${hero} — summarize the unique angle, list 2 actionable tips, and ask for feedback on ${primary || "the tactic"}. Target r/SEO, r/Entrepreneur, or a niche sub. Add a question to spark replies.`,
+      hint: "Pick a subreddit + include a question",
     },
     {
       platform: "Facebook",
-      content: `We just generated "${hero}" with full meta + FAQs. Include 2 bullets from the article and a soft CTA to read the full guide.`,
+      content: `We just generated "${hero}" with full meta + FAQs. Share 2 results-focused bullets, add an image, then invite readers to grab the full guide.`,
     },
     {
       platform: "Email",
-      content: `Subject: ${hero}\n\nPreview: 3-sentence teaser, bullet the outcomes (${primary || "growth, conversions"}), and add a link to the full article + a P.S. with a bonus resource.`,
-      hint: "Reuse as a nurture drip",
+      content: `Subject: ${hero}\n\nPreview: 3-sentence teaser, bullet the outcomes (${primary || "growth, conversions"}), drop the strongest stat, and link to the full article. P.S. tease a bonus resource to drive replies.`,
+      hint: "Reuse as a nurture or launch email",
     },
     {
       platform: "LinkedIn Longform",
-      content: `${hero} — turn into a 600–800 word LinkedIn article with the intro + 2 strongest sections, then link back to the full post.`,
+      content: `${hero} — adapt into a 600–800 word LinkedIn article: intro hook, 2 best sections, 3 bullets + CTA to the full post.`,
     },
     {
       platform: "YouTube/Pinterest",
-      content: `${hero} — outline a 60–90s video script or pin description highlighting the hook, 3 points, and CTA to read the full guide.`,
+      content: `${hero} — outline a 60–90s short video: hook, 3 steps, CTA. For Pinterest, write a 2-line pin description with the main keyword and benefit.`,
+    },
+    {
+      platform: "TikTok",
+      content: `${hero} — 20s script: open with the result, rapid-fire 3 tips, then call to action to read the full guide. Use on-screen text for ${primary || "the core keywords"}.`,
+      hint: "Keep it punchy; add on-screen text",
+    },
+    {
+      platform: "YouTube Description",
+      content: `${hero} — description: 2-line hook, timestamps for the main sections, keywords (${primary || "SEO"}), and a CTA to the article.`,
+      hint: "Add timestamps + keywords",
     },
   ]
 }

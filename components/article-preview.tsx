@@ -336,10 +336,10 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               {renderedHtml ? (
                 <div
                   className="prose prose-lg dark:prose-invert max-w-none
-                             prose-headings:font-bold prose-headings:gradient-text prose-headings:tracking-tight
-                             prose-h1:text-4xl prose-h1:font-black prose-h1:mb-4
-                             prose-h2:text-3xl prose-h2:font-semibold prose-h2:mt-8 prose-h2:border-b prose-h2:border-muted/60 prose-h2:pb-2
-                             prose-h3:text-2xl prose-h3:font-semibold prose-h3:mt-6
+                             prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-slate-50
+                             prose-h1:text-4xl prose-h1:font-black prose-h1:mb-6 prose-h1:leading-tight
+                             prose-h2:text-3xl prose-h2:font-extrabold prose-h2:mt-10 prose-h2:pt-4 prose-h2:border-l-4 prose-h2:border-primary prose-h2:pl-3 prose-h2:bg-muted/40 prose-h2:rounded
+                             prose-h3:text-2xl prose-h3:font-semibold prose-h3:mt-6 prose-h3:text-primary
                              prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-[17px]
                              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                              prose-img:rounded-lg prose-img:shadow-md
