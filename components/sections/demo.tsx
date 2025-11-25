@@ -187,6 +187,61 @@ function buildFallbackHtml(title: string, description: string, keywords: string[
   `
 }
 
+function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[] = [], internalLinks: any[] = []) {
+  if (!Array.isArray(sections) || sections.length === 0) return ""
+
+  const sectionHtml = sections
+    .map((section: any) => {
+      if (!section) return ""
+      const heading = coerceString(section.heading || section.title).trim()
+      const paragraphs = Array.isArray(section.paragraphs)
+        ? section.paragraphs.map((p: any) => `<p>${coerceString(p).trim()}</p>`).join("\n")
+        : ""
+      if (!heading && !paragraphs) return ""
+      return `<section><h2>${heading}</h2>${paragraphs}</section>`
+    })
+    .filter(Boolean)
+    .join("\n")
+
+  const faqsHtml = Array.isArray(faqs) && faqs.length
+    ? `<section><h2>Frequently asked questions</h2>${faqs
+        .map((faq: any) => {
+          const question = coerceString(faq?.question || faq?.q).trim()
+          const answer = coerceString(faq?.answer || faq?.a).trim()
+          if (!question || !answer) return ""
+          return `<div><h3>${question}</h3><p>${answer}</p></div>`
+        })
+        .filter(Boolean)
+        .join("")}</section>`
+    : ""
+
+  const citationsHtml = Array.isArray(citations) && citations.length
+    ? `<section><h2>Citations and sources</h2><ol>${citations
+        .map((c: any) => {
+          const url = coerceString(c?.url).trim()
+          const title = coerceString(c?.title || c?.label).trim() || url
+          if (!url && !title) return ""
+          return `<li><a href="${url || '#'}" rel="noopener" target="_blank">${title}</a></li>`
+        })
+        .filter(Boolean)
+        .join("")}</ol></section>`
+    : ""
+
+  const linksHtml = Array.isArray(internalLinks) && internalLinks.length
+    ? `<section><h2>Internal links to add</h2><ul>${internalLinks
+        .map((link: any) => {
+          const url = coerceString(link?.url).trim()
+          const label = coerceString(link?.anchor_text || link?.title).trim()
+          if (!url && !label) return ""
+          return `<li><a href="${url || '#'}" rel="internal">${label || url}</a></li>`
+        })
+        .filter(Boolean)
+        .join("")}</ul></section>`
+    : ""
+
+  return `<article>${sectionHtml}${linksHtml}${faqsHtml}${citationsHtml}</article>`
+}
+
 function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult {
   if (!raw) return null
 
@@ -265,9 +320,6 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     base.markdown ||
     ""
 
-  const markdownRaw = coerceString(base.markdown || base.content || base.html || base.body)
-  const html = ensureHtml(htmlRaw, markdownRaw)
-
   const citations = (() => {
     const raw = Array.isArray(base.citations) ? base.citations.filter(Boolean) : buildCitations(metaKeywords, title)
     const cleaned = raw
@@ -287,6 +339,32 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     return cleaned.length > 0 ? cleaned : buildCitations(metaKeywords, title)
   })()
 
+  const structuredSections = Array.isArray(base.sections)
+    ? base.sections
+        .filter(Boolean)
+        .map((section: any) => ({
+          heading: coerceString(section.heading || section.title).trim(),
+          paragraphs: Array.isArray(section.paragraphs)
+            ? section.paragraphs.map((p: any) => coerceString(p).trim()).filter(Boolean)
+            : [],
+        }))
+        .filter((s) => s.heading || s.paragraphs.length)
+    : []
+
+  const sectionsHtml = sectionsToHtml(structuredSections, faqs, citations, internalLinks)
+
+  const markdownRaw = coerceString(
+    base.markdown ||
+      base.content ||
+      base.html ||
+      base.body ||
+      structuredSections
+        .map((section) => `## ${section.heading}\n\n${section.paragraphs.join("\n\n")}`)
+        .join("\n\n")
+  )
+
+  const html = ensureHtml(htmlRaw || sectionsHtml, markdownRaw || sectionsHtml)
+
   const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, metaKeywords, internalLinks, faqs, citations))
   const textForCount = stripTags(safeHtml || markdownRaw)
   const generatedCount = base.word_count || base.target_word_count || (textForCount ? textForCount.split(/\s+/).length : 0)
@@ -302,12 +380,18 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
   const seoScore = (() => {
     const rawScore = Number(base.seo_score ?? base.score ?? 0)
     if (rawScore > 0) return rawScore
-    let score = 60
-    if (wordCount > 1200) score += 10
-    if (metaKeywords.length >= 3) score += 10
-    if (internalLinks.length >= 3) score += 10
-    if (safeHtml) score += 5
-    return Math.min(score, 95)
+    let score = 55
+    if (wordCount >= 2000) score += 15
+    else if (wordCount >= 1200) score += 10
+    if (structuredSections.length >= 6) score += 10
+    else if (structuredSections.length >= 4) score += 6
+    if (metaKeywords.length >= 6) score += 8
+    else if (metaKeywords.length >= 3) score += 5
+    if (internalLinks.length >= 3) score += 6
+    if (faqs.length >= 4) score += 6
+    if (citations.length >= 3) score += 6
+    if (safeHtml) score += 4
+    return Math.min(score, 98)
   })()
 
   return {
