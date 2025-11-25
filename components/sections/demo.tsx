@@ -106,10 +106,38 @@ function buildSocialPosts(title: string, summary: string) {
   const base = summary || "See why SEOScribe drafts are clean, long-form, and publish-ready."
   const hero = title || "AI SEO article"
   return [
-    { platform: "LinkedIn", content: `${hero}: key takeaways + checklist → ${base}` },
-    { platform: "X / Twitter", content: `${hero} — fast outline, meta tags, internal links ready. 🚀 #SEO #content` },
-    { platform: "Facebook", content: `We just generated "${hero}" with full meta + FAQs. Read the preview and save to your library.` },
-    { platform: "Email", content: `Subject: ${hero}\n\nInside: structured H2s, FAQs, and interlinking tips so you can publish today.` },
+    {
+      platform: "LinkedIn",
+      content: `${hero}: long-form breakdown + CTA. Add a carousel with the 3 biggest takeaways and close with a demo invite. ${base}`,
+      hint: "Use a 6–8 line post for reach",
+    },
+    {
+      platform: "X / Twitter",
+      content: `${hero} — thread: hook, 3 key tactics, 2 stats, 1 CTA. Tag #SEO #ContentMarketing for visibility.`,
+      hint: "Break into 3–5 tweets",
+    },
+    {
+      platform: "Reddit",
+      content: `${hero} — summarize the unique angle and invite feedback. Share in r/SEO, r/Entrepreneur, or niche communities with a question.`,
+      hint: "Add the best-fit subreddit",
+    },
+    {
+      platform: "Facebook",
+      content: `We just generated "${hero}" with full meta + FAQs. Include 2 bullets from the article and a soft CTA to read the full guide.`,
+    },
+    {
+      platform: "Email",
+      content: `Subject: ${hero}\n\nPreview: 3-sentence teaser, bullet the outcomes, and add a link to the full article + a P.S. with a bonus resource.`,
+      hint: "Reuse as a nurture drip",
+    },
+    {
+      platform: "LinkedIn Longform",
+      content: `${hero} — turn into a 600–800 word LinkedIn article with the intro + 2 strongest sections, then link back to the full post.`,
+    },
+    {
+      platform: "YouTube/Pinterest",
+      content: `${hero} — outline a 60–90s video script or pin description highlighting the hook, 3 points, and CTA to read the full guide.`,
+    },
   ]
 }
 
@@ -140,11 +168,8 @@ function buildCitations(keywords: string[], topic: string) {
   }))
 }
 
-function buildFallbackHtml(title: string, description: string, keywords: string[], links: any[], faqs: any[], citations: any[]) {
+function buildFallbackHtml(title: string, description: string, keywords: string[], _links: any[], faqs: any[], citations: any[]) {
   const keywordsLine = keywords.length ? `<p><strong>Primary keywords:</strong> ${keywords.join(", ")}</p>` : ""
-  const linksList = links
-    .map((link: any) => `<li><a href="${link.url}" rel="internal">${link.anchor_text}</a></li>`)
-    .join("")
   const faqsHtml = faqs
     .map((faq: any) => `<div><h3>${faq.question}</h3><p>${faq.answer}</p></div>`)
     .join("")
@@ -170,10 +195,6 @@ function buildFallbackHtml(title: string, description: string, keywords: string[
           <li>Refresh cadence and QA checklist</li>
           <li>Conversion accelerators and templates</li>
         </ul>
-      </section>
-      <section>
-        <h2>Internal links to add</h2>
-        <ul>${linksList}</ul>
       </section>
       <section>
         <h2>Frequently asked questions</h2>
@@ -222,7 +243,7 @@ function buildFallbackSections(title: string, summary: string, keywords: string[
   ]
 }
 
-function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[] = [], internalLinks: any[] = []) {
+function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[] = []) {
   if (!Array.isArray(sections) || sections.length === 0) return ""
 
   const sectionHtml = sections
@@ -262,19 +283,7 @@ function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[]
         .join("")}</ol></section>`
     : ""
 
-  const linksHtml = Array.isArray(internalLinks) && internalLinks.length
-    ? `<section><h2>Internal links to add</h2><ul>${internalLinks
-        .map((link: any) => {
-          const url = coerceString(link?.url).trim()
-          const label = coerceString(link?.anchor_text || link?.title).trim()
-          if (!url && !label) return ""
-          return `<li><a href="${url || '#'}" rel="internal">${label || url}</a></li>`
-        })
-        .filter(Boolean)
-        .join("")}</ul></section>`
-    : ""
-
-  return `<article>${sectionHtml}${linksHtml}${faqsHtml}${citationsHtml}</article>`
+  return `<article>${sectionHtml}${faqsHtml}${citationsHtml}</article>`
 }
 
 function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult {
@@ -313,13 +322,19 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
   const base = baseCandidate as Record<string, any>
 
   const title = base.title || base.topic || base.headline || "Your Article"
-  const summary = base.meta_description || base.description || base.summary || "SEO-ready AI article with headings and CTAs."
+  const summary = base.meta_description || base.description || base.summary || ""
+
+  const alternativeTitles = Array.isArray(base.alternative_titles)
+    ? base.alternative_titles.filter(Boolean).map(coerceString)
+    : []
 
   const metaKeywords = Array.isArray(base.meta_keywords)
     ? base.meta_keywords
     : Array.isArray(base.keywords)
       ? base.keywords
       : deriveKeywords(`${title} ${summary}`)
+
+  const normalizedMetaKeywords = Array.from(new Set((metaKeywords || []).map((kw) => coerceString(kw).toLowerCase()).filter(Boolean)))
 
   const internalLinks = Array.isArray(base.internal_links)
     ? base.internal_links
@@ -356,7 +371,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     ""
 
   const citations = (() => {
-    const raw = Array.isArray(base.citations) ? base.citations.filter(Boolean) : buildCitations(metaKeywords, title)
+    const raw = Array.isArray(base.citations) ? base.citations.filter(Boolean) : buildCitations(normalizedMetaKeywords, title)
     const cleaned = raw
       .map((citation: any) => {
         const url = coerceString(citation?.url).trim()
@@ -388,9 +403,18 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
 
   const sectionsToRender = structuredSections.length
     ? structuredSections
-    : buildFallbackSections(title, summary, metaKeywords)
+    : buildFallbackSections(title, summary, normalizedMetaKeywords)
 
-  const sectionsHtml = sectionsToHtml(sectionsToRender, faqs, citations, internalLinks)
+  const sectionsHtml = sectionsToHtml(sectionsToRender, faqs, citations)
+
+  const summaryFromSections = (() => {
+    const firstParagraph = sectionsToRender[0]?.paragraphs?.find((p: string) => p && p.length > 40) || ""
+    if (firstParagraph) {
+      const clipped = firstParagraph.replace(/\s+/g, " ").trim()
+      return clipped.length > 155 ? `${clipped.slice(0, 152)}…` : clipped
+    }
+    return ""
+  })()
 
   const markdownRaw = coerceString(
       base.markdown ||
@@ -404,7 +428,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
 
   const html = ensureHtml(htmlRaw || sectionsHtml, markdownRaw || sectionsHtml)
 
-  const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, metaKeywords, internalLinks, faqs, citations))
+  const safeHtml = html || sanitizeHtml(buildFallbackHtml(title, summary, normalizedMetaKeywords, internalLinks, faqs, citations))
   const textForCount = stripTags(safeHtml || markdownRaw)
   const generatedCount = base.word_count || base.target_word_count || (textForCount ? textForCount.split(/\s+/).length : 0)
   const wordCount = context.baseWordCount ? context.baseWordCount + generatedCount : generatedCount
@@ -424,8 +448,8 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     else if (wordCount >= 1200) score += 10
     if (sectionsToRender.length >= 6) score += 10
     else if (sectionsToRender.length >= 4) score += 6
-    if (metaKeywords.length >= 6) score += 8
-    else if (metaKeywords.length >= 3) score += 5
+    if (normalizedMetaKeywords.length >= 6) score += 8
+    else if (normalizedMetaKeywords.length >= 3) score += 5
     if (internalLinks.length >= 3) score += 6
     if (faqs.length >= 4) score += 6
     if (citations.length >= 3) score += 6
@@ -440,10 +464,10 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     sections: sectionsToRender,
     html: safeHtml,
     markdown: markdownRaw,
-    meta_title: base.meta_title || title,
-    meta_description: summary,
-    meta_keywords: metaKeywords,
-    keywords: Array.isArray(base.keywords) && base.keywords.length > 0 ? base.keywords : metaKeywords,
+    meta_title: base.meta_title || alternativeTitles[0] || title,
+    meta_description: summaryFromSections || summary || "SEO-ready AI article with headings and CTAs.",
+    meta_keywords: normalizedMetaKeywords,
+    keywords: Array.isArray(base.keywords) && base.keywords.length > 0 ? base.keywords : normalizedMetaKeywords,
     citations,
     faqs,
     internal_links: internalLinks,
@@ -632,12 +656,24 @@ function DemoContent() {
       updateQuota(updatedQuota)
       setTimeout(() => syncWithBackend(), 500)
 
+      const mergedSections = [
+        ...(Array.isArray(result.sections) ? result.sections : []),
+        ...(Array.isArray(normalized.sections) ? normalized.sections : []),
+      ]
+
+      const mergedHtml = ensureHtml(
+        `${result.html || ""}\n\n${normalized.html || ""}`,
+        `${result.markdown || ""}\n\n${normalized.markdown || ""}`,
+      )
+
       setResult({
         ...result,
         ...normalized,
+        sections: mergedSections,
         article_id: rawResult?.article_id || result.article_id,
         markdown: [result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
-        html: ensureHtml(normalized.html, normalized.markdown),
+        html: mergedHtml,
+        word_count: (result.word_count || 0) + (normalized.word_count || 0),
       })
     } catch (e: any) {
       setError(e?.message || "Failed to extend draft")

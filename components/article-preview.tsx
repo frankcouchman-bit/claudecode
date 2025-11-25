@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import { saveArticle, updateArticle } from "@/lib/api"
 import { ensureHtml, sanitizeHtml } from "@/lib/sanitize-html"
 import { useQuota } from "@/contexts/quota-context"
@@ -40,6 +41,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [activeTab, setActiveTab] = useState("preview")
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [socialEdits, setSocialEdits] = useState<Record<string, string>>({})
 
   const titleIdeas = (() => {
     const primary = result?.title || "SEO Article"
@@ -49,21 +51,42 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
         ? result.keywords
         : []
 
-    const seed = keywords[0] || primary
+    const alternates = Array.isArray(result?.alternative_titles) ? result.alternative_titles.filter(Boolean) : []
+    const year = new Date().getFullYear()
+
     const variants = Array.from(new Set([
       primary,
-      `${seed} – Complete Guide`,
-      `${seed} Checklist (${new Date().getFullYear()})`,
-      `How to ${seed}`,
-    ])).
-      filter(Boolean)
+      ...alternates,
+      keywords[0] ? `${primary}: ${keywords[0]} strategies` : null,
+      keywords[0] && keywords[1] ? `${keywords[0]} vs ${keywords[1]} — what wins in ${year}` : null,
+      `${primary} (${year} edition)`
+    ].filter(Boolean)))
 
     return variants.map((title) => {
-      const lengthScore = title.length >= 45 && title.length <= 65 ? 95 : 75
-      const keywordScore = keywords.some((kw) => title.toLowerCase().includes(String(kw).toLowerCase())) ? 5 : 0
-      return { title, score: Math.min(100, lengthScore + keywordScore) }
+      const lengthScore = title.length >= 45 && title.length <= 65 ? 60 : 45
+      const keywordScore = keywords.reduce((score, kw) => score + (title.toLowerCase().includes(String(kw).toLowerCase()) ? 8 : 0), 0)
+      const clarityScore = /guide|how|vs|checklist|framework|playbook/i.test(title) ? 12 : 6
+      const freshnessScore = title.includes(String(year)) ? 10 : 5
+      return { title, score: Math.min(100, lengthScore + keywordScore + clarityScore + freshnessScore) }
     })
   })()
+
+  const socialPostsList: { platform: string; content: string; hint?: string }[] = (() => {
+    const sp = result?.social_posts
+    if (Array.isArray(sp)) return sp as any
+    if (sp && typeof sp === "object") {
+      return Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
+    }
+    return []
+  })()
+
+  useEffect(() => {
+    const next: Record<string, string> = {}
+    socialPostsList.forEach((post) => {
+      next[post.platform] = post.content || ""
+    })
+    setSocialEdits(next)
+  }, [result?.id, result?.title, socialPostsList.map((p) => `${p.platform}:${p.content}`).join("|")])
 
   const safeHtml = ensureHtml(result?.html, result?.content)
   const safeMarkdown = typeof result?.markdown === "string" ? result.markdown : ""
@@ -141,7 +164,9 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
     setSaving(true)
     try {
-      const wordCount = Number(result.word_count) || 0
+      const textForCount = ensureHtml(result?.html || "", result?.markdown || "").replace(/<[^>]+>/g, " ")
+      const derivedCount = textForCount ? textForCount.split(/\s+/).filter(Boolean).length : 0
+      const wordCount = Number(result.word_count) || derivedCount
       const payload = {
         title: result.title || "Untitled",
         data: result,
@@ -312,6 +337,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 <div
                   className="prose prose-lg dark:prose-invert max-w-none
                              prose-headings:font-bold prose-headings:gradient-text
+                             prose-h1:text-4xl prose-h1:font-black prose-h2:text-2xl prose-h2:font-semibold prose-h3:text-xl
                              prose-p:text-muted-foreground prose-p:leading-relaxed
                              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                              prose-img:rounded-lg prose-img:shadow-md
@@ -439,29 +465,20 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(() => {
-                // Convert social_posts to an array of objects.  The API may return
-                // either an array or a map keyed by platform.  We normalise
-                // everything to an array with `platform` and `content` fields.
-                let postsArray: { platform: string; content: string }[] = []
-                const sp = result?.social_posts
-                if (Array.isArray(sp)) {
-                  postsArray = sp as any
-                } else if (sp && typeof sp === 'object') {
-                  postsArray = Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
-                }
-                if (postsArray.length > 0) {
-                  return postsArray.map((post: any, i: number) => (
-                    <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="capitalize">
-                          <Globe className="w-3 h-3 mr-1" />
-                          {post.platform || 'General'}
-                        </Badge>
+              {socialPostsList.length > 0 ? (
+                socialPostsList.map((post: any, i: number) => (
+                  <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="capitalize">
+                        <Globe className="w-3 h-3 mr-1" />
+                        {post.platform || 'General'}
+                      </Badge>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {post.hint && <span>{post.hint}</span>}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => copyToClipboard(post.content, `social-${i}`)}
+                          onClick={() => copyToClipboard(socialEdits[post.platform] || post.content, `social-${i}`)}
                         >
                           {copied === `social-${i}` ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -470,12 +487,22 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                           )}
                         </Button>
                       </div>
-                      <p className="text-sm">{post.content}</p>
                     </div>
-                  ))
-                }
-                return <p className="text-sm text-muted-foreground">No social posts generated</p>
-              })()}
+                    <Textarea
+                      value={socialEdits[post.platform] ?? post.content ?? ''}
+                      onChange={(e) =>
+                        setSocialEdits((prev) => ({
+                          ...prev,
+                          [post.platform]: e.target.value,
+                        }))
+                      }
+                      className="min-h-[120px] text-sm"
+                    />
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No social posts generated</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
