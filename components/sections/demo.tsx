@@ -75,6 +75,22 @@ function deriveKeywords(subject: string, fallback: string[] = []) {
   return deduped.slice(0, 8)
 }
 
+function deriveKeywordsFromSections(sections: any[], fallback: string[]): string[] {
+  const bag: Record<string, number> = {}
+  sections.forEach((section) => {
+    const heading = coerceString(section?.heading || section?.title)
+    const text = [heading, ...(Array.isArray(section?.paragraphs) ? section.paragraphs : [])].join(" ")
+    deriveKeywords(text).forEach((kw) => {
+      bag[kw] = (bag[kw] || 0) + 1
+    })
+  })
+  const sorted = Object.entries(bag)
+    .sort((a, b) => b[1] - a[1])
+    .map(([kw]) => kw)
+  const merged = Array.from(new Set([...(sorted || []), ...(fallback || [])])).slice(0, 12)
+  return merged
+}
+
 function normalizeUrl(input?: string) {
   if (!input) return ""
   try {
@@ -102,23 +118,24 @@ function buildInternalLinks(topic: string, siteUrl?: string) {
   return anchors.map((link) => ({ ...link, anchor_text: `${link.anchor_text} · ${topic}` }))
 }
 
-function buildSocialPosts(title: string, summary: string) {
+function buildSocialPosts(title: string, summary: string, keywords: string[]) {
   const base = summary || "See why SEOScribe drafts are clean, long-form, and publish-ready."
   const hero = title || "AI SEO article"
+  const primary = keywords.slice(0, 3).join(", ")
   return [
     {
       platform: "LinkedIn",
-      content: `${hero}: long-form breakdown + CTA. Add a carousel with the 3 biggest takeaways and close with a demo invite. ${base}`,
+      content: `${hero}: long-form breakdown with ${primary || "search intent"}. Add a carousel of the 3 strongest takeaways and close with a demo invite. ${base}`,
       hint: "Use a 6–8 line post for reach",
     },
     {
       platform: "X / Twitter",
-      content: `${hero} — thread: hook, 3 key tactics, 2 stats, 1 CTA. Tag #SEO #ContentMarketing for visibility.`,
+      content: `${hero} — thread: hook, 3 key tactics, 2 fresh stats, 1 CTA. Tag #SEO #ContentMarketing for visibility.`,
       hint: "Break into 3–5 tweets",
     },
     {
       platform: "Reddit",
-      content: `${hero} — summarize the unique angle and invite feedback. Share in r/SEO, r/Entrepreneur, or niche communities with a question.`,
+      content: `${hero} — summarize the unique angle and invite feedback. Share in r/SEO, r/Entrepreneur, or niche communities with a question about ${primary || "your niche"}.`,
       hint: "Add the best-fit subreddit",
     },
     {
@@ -127,7 +144,7 @@ function buildSocialPosts(title: string, summary: string) {
     },
     {
       platform: "Email",
-      content: `Subject: ${hero}\n\nPreview: 3-sentence teaser, bullet the outcomes, and add a link to the full article + a P.S. with a bonus resource.`,
+      content: `Subject: ${hero}\n\nPreview: 3-sentence teaser, bullet the outcomes (${primary || "growth, conversions"}), and add a link to the full article + a P.S. with a bonus resource.`,
       hint: "Reuse as a nurture drip",
     },
     {
@@ -141,6 +158,17 @@ function buildSocialPosts(title: string, summary: string) {
   ]
 }
 
+function buildMetaDescription(title: string, sections: any[], keywords: string[], fallback: string) {
+  const sectionParagraph = sections
+    .flatMap((s) => (Array.isArray(s?.paragraphs) ? s.paragraphs : []))
+    .find((p) => p && p.length > 80)
+  const keywordLine = keywords.slice(0, 4).join(", ")
+  const base = sectionParagraph
+    ? sectionParagraph.replace(/\s+/g, " ").trim()
+    : `${title} — practical steps, fresh research, and on-page SEO guidance for ${keywordLine || "your query"}.`
+  const cleaned = base.length > 160 ? `${base.slice(0, 157)}…` : base
+  return cleaned || fallback
+}
 function buildFaqs(topic: string) {
   const subject = topic || "AI SEO writing"
   return [
@@ -405,6 +433,8 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     ? structuredSections
     : buildFallbackSections(title, summary, normalizedMetaKeywords)
 
+  const enrichedKeywords = deriveKeywordsFromSections(sectionsToRender, normalizedMetaKeywords)
+
   const sectionsHtml = sectionsToHtml(sectionsToRender, faqs, citations)
 
   const summaryFromSections = (() => {
@@ -437,7 +467,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     const rawSocial = base.social_posts
     if (Array.isArray(rawSocial) && rawSocial.length > 0) return rawSocial
     if (rawSocial && typeof rawSocial === "object" && Object.keys(rawSocial).length > 0) return rawSocial
-    return buildSocialPosts(title, summary)
+    return buildSocialPosts(title, summaryFromSections || summary, enrichedKeywords)
   })()
 
   const seoScore = (() => {
@@ -457,6 +487,14 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     return Math.min(score, 98)
   })()
 
+  const metaDescription = buildMetaDescription(
+    title,
+    sectionsToRender,
+    enrichedKeywords,
+    summaryFromSections || summary || `${title} — detailed, rank-ready walkthrough.`
+  )
+  const metaTitle = (base.meta_title || alternativeTitles[0] || title).slice(0, 60)
+
   return {
     ...base,
     title,
@@ -464,10 +502,10 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     sections: sectionsToRender,
     html: safeHtml,
     markdown: markdownRaw,
-    meta_title: base.meta_title || alternativeTitles[0] || title,
-    meta_description: summaryFromSections || summary || "SEO-ready AI article with headings and CTAs.",
-    meta_keywords: normalizedMetaKeywords,
-    keywords: Array.isArray(base.keywords) && base.keywords.length > 0 ? base.keywords : normalizedMetaKeywords,
+    meta_title: metaTitle,
+    meta_description: metaDescription,
+    meta_keywords: enrichedKeywords,
+    keywords: Array.isArray(base.keywords) && base.keywords.length > 0 ? base.keywords : enrichedKeywords,
     citations,
     faqs,
     internal_links: internalLinks,
@@ -476,6 +514,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     seo_score: seoScore,
     readability_score: base.readability_score ?? "",
     word_count: Number(wordCount) || 0,
+    article_id: base.article_id || base.articleId || base.id || base.uuid || base._id || null,
   }
 }
 
