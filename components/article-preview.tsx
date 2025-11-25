@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { saveArticle } from "@/lib/api"
+import { saveArticle, updateArticle } from "@/lib/api"
 import { ensureHtml, sanitizeHtml } from "@/lib/sanitize-html"
 import { useQuota } from "@/contexts/quota-context"
 import { motion } from "framer-motion"
@@ -151,7 +151,11 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
         seo_score: result.seo_score ?? null,
       }
 
-      await saveArticle(payload)
+      if (result.article_id) {
+        await updateArticle(result.article_id, payload)
+      } else {
+        await saveArticle(payload)
+      }
 
       setSaved(true)
       setTimeout(() => {

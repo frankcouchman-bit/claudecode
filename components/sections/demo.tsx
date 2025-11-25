@@ -187,6 +187,41 @@ function buildFallbackHtml(title: string, description: string, keywords: string[
   `
 }
 
+function buildFallbackSections(title: string, summary: string, keywords: string[]) {
+  const primary = title || "SEO-ready article"
+  const keywordLine = keywords.length ? keywords.slice(0, 5).join(", ") : "search intent"
+  return [
+    {
+      heading: `${primary}: key takeaways`,
+      paragraphs: [
+        summary || `This article unpacks ${primary} with clear, rank-ready advice tailored to the query.`,
+        `We target: ${keywordLine}. Expect concise, example-rich explanations tuned for modern SERP expectations.`,
+      ],
+    },
+    {
+      heading: "Step-by-step playbook",
+      paragraphs: [
+        "Follow this ordered workflow: research the intent, map subtopics, draft persuasive H2/H3s, and weave in internal links.",
+        "Each section should stay skimmable with short paragraphs, bullet lists where helpful, and concrete examples for credibility.",
+      ],
+    },
+    {
+      heading: "Optimization checklist",
+      paragraphs: [
+        "Double-check meta title/description, URL slugs, alt text, schema readiness, and accessibility before publishing.",
+        "Add 3–5 authoritative citations plus 3+ internal links to pillar or supporting resources to strengthen E-E-A-T.",
+      ],
+    },
+    {
+      heading: "Conclusion and next steps",
+      paragraphs: [
+        "Summarize the highest-impact actions and offer 1–2 calls to action (demo, newsletter, or related guide).",
+        "Invite readers to extend the article to the maximum plan length for deeper coverage and improved topical authority.",
+      ],
+    },
+  ]
+}
+
 function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[] = [], internalLinks: any[] = []) {
   if (!Array.isArray(sections) || sections.length === 0) return ""
 
@@ -351,14 +386,18 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
         .filter((s) => s.heading || s.paragraphs.length)
     : []
 
-  const sectionsHtml = sectionsToHtml(structuredSections, faqs, citations, internalLinks)
+  const sectionsToRender = structuredSections.length
+    ? structuredSections
+    : buildFallbackSections(title, summary, metaKeywords)
+
+  const sectionsHtml = sectionsToHtml(sectionsToRender, faqs, citations, internalLinks)
 
   const markdownRaw = coerceString(
-    base.markdown ||
+      base.markdown ||
       base.content ||
       base.html ||
       base.body ||
-      structuredSections
+      sectionsToRender
         .map((section) => `## ${section.heading}\n\n${section.paragraphs.join("\n\n")}`)
         .join("\n\n")
   )
@@ -383,8 +422,8 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     let score = 55
     if (wordCount >= 2000) score += 15
     else if (wordCount >= 1200) score += 10
-    if (structuredSections.length >= 6) score += 10
-    else if (structuredSections.length >= 4) score += 6
+    if (sectionsToRender.length >= 6) score += 10
+    else if (sectionsToRender.length >= 4) score += 6
     if (metaKeywords.length >= 6) score += 8
     else if (metaKeywords.length >= 3) score += 5
     if (internalLinks.length >= 3) score += 6
@@ -398,6 +437,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     ...base,
     title,
     topic: base.topic || base.title || "",
+    sections: sectionsToRender,
     html: safeHtml,
     markdown: markdownRaw,
     meta_title: base.meta_title || title,
