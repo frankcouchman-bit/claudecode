@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { getArticle, deleteArticle, generateDraft, updateArticle } from "@/lib/api"
+import { getArticle, deleteArticle, expandDraft, updateArticle } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -87,7 +87,6 @@ export default function ArticleViewPage() {
     const planCap = quota.plan === 'pro' ? 3000 : 2000
     const targetWords = Math.min(parseInt(targetWordCount) || planCap, planCap)
 
-    // If target is same or less than current, warn user
     if (targetWords <= currentWordCount) {
       if (!confirm(`Current article has ${currentWordCount} words. Target is ${targetWords} words. This will regenerate (not expand) the article. Continue?`)) {
         return
@@ -98,51 +97,59 @@ export default function ArticleViewPage() {
       setRegenerating(true)
       setRegenerateDialogOpen(false)
 
-      // Prepare existing content for expansion
       const existingContent = article.markdown || article.html || article.content || ""
       const existingHeadings = extractHeadings(existingContent)
 
-      // Expand existing article with new content
-      const expandedArticle = await generateDraft({
-        topic: article.title || article.topic,
-        tone: article.tone || "professional",
-        language: article.language || "en",
+      const expandedArticle = await expandDraft({
+        article_id: id,
+        article_json: article,
+        context: existingContent,
+        keyword: article.topic || article.title,
         target_word_count: targetWords,
-        research: true,
-        generate_social: true,
-        generate_image: true,
-        generate_faqs: true,
-        // Include existing content so AI can expand it naturally
-        existing_content: existingContent,
-        existing_headings: existingHeadings,
+        website_url: article.website_url || "",
+        region: article.region || "",
+        with_image: true,
         expansion_mode: true,
-        expansion_instructions: `Expand the existing article from ${currentWordCount} words to approximately ${targetWords} words. Add new sections, headings, and detailed content that naturally flows from the existing content. Include additional research, examples, case studies, and deeper explanations. Maintain consistency in tone and style with the existing content.`
+        existing_headings: existingHeadings,
       })
 
-      // Merge expanded content with existing metadata
-      const mergedCitations = [...(article.citations || []), ...(expandedArticle.citations || [])]
-      const mergedLinks = [...(article.internal_links || []), ...(expandedArticle.internal_links || [])]
-      const mergedFaqs = [...(article.faqs || []), ...(expandedArticle.faqs || [])]
-      const combinedWordCount = expandedArticle.word_count || targetWords
+      const mergedSections = mergeSections(article?.sections, expandedArticle?.sections)
+      const mergedFaqs = mergeFaqs(article?.faqs, expandedArticle?.faqs)
+      const mergedCitations = mergeByUrl(article?.citations, expandedArticle?.citations)
+      const mergedLinks = mergeByUrl(article?.internal_links, expandedArticle?.internal_links)
+      const mergedKeywords = mergeKeywords(article?.seo_keywords, expandedArticle?.seo_keywords)
+
+      const mergedMarkdown = [article.markdown, expandedArticle?.markdown].filter(Boolean).join("\n\n")
+      const mergedHtml = [article.html, expandedArticle?.html].filter(Boolean).join("\n")
+      const mergedContent = mergedMarkdown || mergedHtml || existingContent
+      const combinedWordCount = Math.max(
+        countWords(mergedContent),
+        expandedArticle?.word_count || 0,
+        article.word_count || 0
+      )
 
       await updateArticle(id, {
-        title: expandedArticle.title || article.title,
+        title: expandedArticle?.title || article.title,
         data: {
           ...article,
           ...expandedArticle,
+          sections: mergedSections,
+          faqs: mergedFaqs,
           citations: mergedCitations,
           internal_links: mergedLinks,
-          faqs: mergedFaqs,
+          seo_keywords: mergedKeywords,
+          markdown: mergedMarkdown,
+          html: mergedHtml,
+          image_url: expandedArticle?.image_url || article.image_url,
         },
         word_count: combinedWordCount,
         reading_time_minutes: Math.max(1, Math.round(combinedWordCount / 220)),
-        meta_title: expandedArticle.meta_title || article.meta_title,
-        meta_description: expandedArticle.meta_description || article.meta_description,
-        seo_score: expandedArticle.seo_score || article.seo_score,
-        updated_at: new Date().toISOString()
+        meta_title: expandedArticle?.meta_title || article.meta_title,
+        meta_description: expandedArticle?.meta_description || article.meta_description,
+        seo_score: expandedArticle?.seo_score || article.seo_score,
+        updated_at: new Date().toISOString(),
       })
 
-      // Reload article to show expanded content
       await loadArticle()
 
       alert(`✅ Article successfully expanded from ${currentWordCount} to ~${targetWords} words!`)
@@ -167,6 +174,82 @@ export default function ArticleViewPage() {
       headings.push(...htmlHeadings.map(h => h.replace(/<[^>]+>/g, '')))
     }
     return headings
+  }
+
+  function mergeSections(current: any, incoming: any) {
+    const base = Array.isArray(current) ? current : []
+    const next = Array.isArray(incoming) ? incoming : []
+    const map = new Map<string, { heading: string; paragraphs: string[] }>()
+
+    const addSection = (section: any) => {
+      if (!section) return
+      const heading = String(section.heading || "").trim()
+      const key = heading.toLowerCase() || `section-${map.size}`
+      const paragraphs = Array.isArray(section.paragraphs) ? section.paragraphs.map((p: any) => String(p || "").trim()) : []
+      if (!map.has(key)) {
+        map.set(key, { heading, paragraphs })
+      } else {
+        const existing = map.get(key)!
+        const mergedParas = Array.from(new Set([...existing.paragraphs, ...paragraphs].filter(Boolean)))
+        map.set(key, { heading: existing.heading || heading, paragraphs: mergedParas })
+      }
+    }
+
+    base.forEach(addSection)
+    next.forEach(addSection)
+
+    return Array.from(map.values()).filter((s) => s.heading || s.paragraphs.length)
+  }
+
+  function mergeFaqs(current: any, incoming: any) {
+    const base = Array.isArray(current) ? current : []
+    const next = Array.isArray(incoming) ? incoming : []
+    const map = new Map<string, { q: string; a: string }>()
+    const addFaq = (faq: any) => {
+      if (!faq) return
+      const q = String(faq.q || "").trim()
+      const a = String(faq.a || "").trim()
+      if (!q && !a) return
+      if (!map.has(q.toLowerCase())) {
+        map.set(q.toLowerCase(), { q, a })
+      }
+    }
+    base.forEach(addFaq)
+    next.forEach(addFaq)
+    return Array.from(map.values())
+  }
+
+  function mergeByUrl(current: any, incoming: any) {
+    const base = Array.isArray(current) ? current : []
+    const next = Array.isArray(incoming) ? incoming : []
+    const seen = new Set<string>()
+    const merged: any[] = []
+    const add = (item: any) => {
+      if (!item) return
+      const url = String(item.url || "").trim()
+      const key = url || JSON.stringify(item)
+      if (seen.has(key)) return
+      seen.add(key)
+      merged.push(item)
+    }
+    base.forEach(add)
+    next.forEach(add)
+    return merged
+  }
+
+  function mergeKeywords(current: any, incoming: any) {
+    const base = Array.isArray(current) ? current : []
+    const next = Array.isArray(incoming) ? incoming : []
+    return Array.from(new Set([...base, ...next].filter(Boolean))).slice(0, 50)
+  }
+
+  function countWords(text: string) {
+    return String(text || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .filter(Boolean).length
   }
 
   function getSEOBadgeColor(score: number) {
