@@ -113,11 +113,14 @@ export default function ArticleViewPage() {
         existing_headings: existingHeadings,
       })
 
-      const mergedSections = mergeSections(article?.sections, expandedArticle?.sections)
-      const mergedFaqs = mergeFaqs(article?.faqs, expandedArticle?.faqs)
-      const mergedCitations = mergeByUrl(article?.citations, expandedArticle?.citations)
-      const mergedLinks = mergeByUrl(article?.internal_links, expandedArticle?.internal_links)
-      const mergedKeywords = mergeKeywords(article?.seo_keywords, expandedArticle?.seo_keywords)
+    const baseSections = coerceSections(article?.sections, article?.html || article?.markdown || existingContent)
+    const incomingSections = coerceSections(expandedArticle?.sections, expandedArticle?.html || expandedArticle?.markdown || "")
+
+    const mergedSections = mergeSections(baseSections, incomingSections)
+    const mergedFaqs = mergeFaqs(article?.faqs, expandedArticle?.faqs)
+    const mergedCitations = mergeByUrl(article?.citations, expandedArticle?.citations)
+    const mergedLinks = mergeByUrl(article?.internal_links, expandedArticle?.internal_links)
+    const mergedKeywords = mergeKeywords(article?.seo_keywords, expandedArticle?.seo_keywords)
 
       const mergedMarkdown = [article.markdown, expandedArticle?.markdown].filter(Boolean).join("\n\n")
       const mergedHtml = [article.html, expandedArticle?.html].filter(Boolean).join("\n")
@@ -183,9 +186,11 @@ export default function ArticleViewPage() {
 
     const addSection = (section: any) => {
       if (!section) return
-      const heading = String(section.heading || "").trim()
+      const heading = capitalizeHeading(String(section.heading || "").trim())
       const key = heading.toLowerCase() || `section-${map.size}`
-      const paragraphs = Array.isArray(section.paragraphs) ? section.paragraphs.map((p: any) => String(p || "").trim()) : []
+      const paragraphs = Array.isArray(section.paragraphs)
+        ? section.paragraphs.map((p: any) => String(p || "").trim()).filter(Boolean)
+        : []
       if (!map.has(key)) {
         map.set(key, { heading, paragraphs })
       } else {
@@ -199,6 +204,82 @@ export default function ArticleViewPage() {
     next.forEach(addSection)
 
     return Array.from(map.values()).filter((s) => s.heading || s.paragraphs.length)
+  }
+
+  function coerceSections(sections: any, fallbackContent: string) {
+    if (Array.isArray(sections) && sections.some((s) => s?.paragraphs?.length || s?.heading)) {
+      return sections.map((s) => ({
+        heading: capitalizeHeading(String(s?.heading || "").trim()),
+        paragraphs: Array.isArray(s?.paragraphs)
+          ? s.paragraphs.map((p: any) => String(p || "").trim()).filter(Boolean)
+          : [],
+      }))
+    }
+
+    const parsedFromHtml = parseSectionsFromHtml(toHtmlish(fallbackContent))
+    if (parsedFromHtml.length) return parsedFromHtml
+
+    return []
+  }
+
+  function toHtmlish(content: string) {
+    if (!content) return ""
+    // Roughly convert markdown headings to HTML tags so we can reuse the HTML parser.
+    return content
+      .replace(/^###\s+(.*)$/gim, "<h3>$1</h3>")
+      .replace(/^##\s+(.*)$/gim, "<h2>$1</h2>")
+      .replace(/^#\s+(.*)$/gim, "<h1>$1</h1>")
+  }
+
+  function parseSectionsFromHtml(html: string) {
+    if (!html) return [] as { heading: string; paragraphs: string[] }[]
+    const sections: { heading: string; paragraphs: string[] }[] = []
+    const headingRegex = /<h[1-3][^>]*>(.*?)<\/h[1-3]>/gi
+    let match: RegExpExecArray | null
+    let lastIndex = 0
+    let current: { heading: string; paragraphs: string[] } | null = null
+
+    const cleanText = (input: string) =>
+      input
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+
+    const pushParagraphs = (raw: string) => {
+      const normalized = raw.replace(/<p[^>]*>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<br\s*\/?/gi, "\n")
+      const chunks = normalized
+        .split(/\n{2,}/)
+        .map((p) => cleanText(p))
+        .filter(Boolean)
+      if (chunks.length && current) {
+        current.paragraphs.push(...chunks)
+      }
+    }
+
+    while ((match = headingRegex.exec(html))) {
+      if (current) {
+        const between = html.slice(lastIndex, match.index)
+        pushParagraphs(between)
+        sections.push(current)
+      }
+      const headingText = cleanText(match[1])
+      current = { heading: capitalizeHeading(headingText), paragraphs: [] }
+      lastIndex = match.index + match[0].length
+    }
+
+    if (current) {
+      const tail = html.slice(lastIndex)
+      pushParagraphs(tail)
+      sections.push(current)
+    }
+
+    return sections.filter((s) => s.heading || s.paragraphs.length)
+  }
+
+  function capitalizeHeading(text: string) {
+    if (!text) return ""
+    return text.charAt(0).toUpperCase() + text.slice(1)
   }
 
   function mergeFaqs(current: any, incoming: any) {
