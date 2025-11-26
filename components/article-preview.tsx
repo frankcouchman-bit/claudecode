@@ -60,6 +60,19 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
   const derivedKeywords = deriveKeywords()
 
+  const nextKeywords = (() => {
+    const suggestions = result?.keyword_suggestions
+    const buckets = suggestions && typeof suggestions === "object"
+      ? [suggestions.primary, suggestions.secondary, suggestions.long_tail, suggestions.questions]
+      : []
+    const flattened = buckets
+      .filter(Array.isArray)
+      .flat()
+      .map((kw: any) => (typeof kw === "string" ? kw : kw?.keyword || ""))
+    const merged = [...derivedKeywords, ...flattened].map((kw) => String(kw).trim()).filter(Boolean)
+    return Array.from(new Set(merged)).slice(0, 15)
+  })()
+
   function deriveMetaDescription() {
     const explicit = typeof result?.meta_description === "string" ? result.meta_description.trim() : ""
     const looksGeneric = /seo-ready ai article/i.test(explicit)
@@ -139,42 +152,43 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     const desc = derivedMetaDescription || result?.summary || ""
     const kws = derivedKeywords.slice(0, 6).join(", ")
     const primaryKeyword = derivedKeywords[0] || ""
+    const supporting = derivedKeywords.slice(1, 3).join(" · ")
 
     return [
       {
         platform: "linkedin",
-        content: `${title} — ${desc}\n\n• Pain → promise\n• 3-sentence story\n• Checklist: 3 steps\n• CTA: See the full guide`.slice(0, 650),
-        hint: "4–8 lines, add 1–2 niche hashtags + link CTA",
+        content: `${title}\n\nHook: why ${primaryKeyword || "this topic"} matters now.\nStory: 3 lines on the shift in 2025.\nValue: 3 bullets with metrics.\nCTA: Read the full guide for templates.\n#${primaryKeyword || "SEO"} ${supporting}`.slice(0, 700),
+        hint: "6–8 lines, 1–2 niche hashtags, add a link CTA",
       },
       {
         platform: "x",
-        content: `Thread: ${title}\n1/ Hook (${primaryKeyword || "keyword"})\n2/ Tip + stat\n3/ Mini checklist\n4/ CTA → link`.slice(0, 280),
-        hint: "Pin first tweet, thread 3–6 posts for reach",
+        content: `Thread on ${primaryKeyword || "this topic"}:\n1/ Hook with a stat or pain\n2/ Playbook: 3 bullets\n3/ Example + metric\n4/ CTA → read the full article`.slice(0, 280),
+        hint: "Pin tweet 1, thread 4–6 posts for reach",
       },
       {
         platform: "reddit",
-        content: `Title: ${title}\n\nBody: Hook in 1 line → 3 insights → question. Include 1 source from the article.`,
-        hint: "Pick the right community (r/SEO, r/Entrepreneur) and keep it conversational",
+        content: `Title: ${title}\n\nBody: quick hook on ${primaryKeyword || "the topic"}.\n- Insight 1 with a metric\n- Insight 2 with an example\n- Insight 3 with a tool tip\nQuestion: How are you tackling this? Source: include one citation from the article.`,
+        hint: "Pick a community (r/SEO, r/Entrepreneur); conversational tone wins",
       },
       {
         platform: "facebook",
-        content: `${title}\n\n${desc}\n• Tip 1\n• Tip 2\n• Tip 3\nCTA: Read the full guide`.slice(0, 600),
-        hint: "Keep it scannable with bullets and one link",
+        content: `${title}\n${desc}\n\n• Problem → quick win\n• Tool/step with 1 stat\n• CTA: read the full guide for templates`.slice(0, 600),
+        hint: "Keep it scannable with 3 bullets and one link",
       },
       {
         platform: "instagram",
-        content: `${title} ✨ ${desc}\nHook → 3 tips → CTA slide. Include niche hashtags: ${kws}`.slice(0, 450),
-        hint: "Great as a carousel caption",
+        content: `${title} ✨ ${desc}\nHook → 3 tips → CTA slide. Hashtags: ${kws}`.slice(0, 450),
+        hint: "Carousel caption with 3 tips + CTA slide",
       },
       {
         platform: "tiktok",
-        content: `Script: Hook (“${title} in 20s”), 3 punchy tips, stat/quote, CTA to read more. Overlay keywords: ${kws}`.slice(0, 320),
-        hint: "15–20s voiceover with on-screen bullets and keyword overlays",
+        content: `Script: Hook (“${title} in 20s”), 3 punchy tips with stats, CTA to read more. Overlay keywords: ${kws}`.slice(0, 320),
+        hint: "15–20s voiceover with on-screen bullets and overlays",
       },
       {
         platform: "youtube",
-        content: `${title} — value prop, who it's for, bullet timestamps (00:10, 01:20, 02:40), CTA to full article. Keywords: ${kws}`.slice(0, 700),
-        hint: "Add 3–5 keywords + link in first lines",
+        content: `${title} — for ${primaryKeyword || "marketers"}.\nTimestamps: 00:10 hook, 01:00 playbook, 02:30 examples, 03:30 tools. CTA + link in first line. Keywords: ${kws}`.slice(0, 700),
+        hint: "Add 3–5 keywords + link in first line",
       },
       {
         platform: "email",
@@ -483,7 +497,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
         {/* SEO Data Tab */}
         <TabsContent value="seo" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -519,6 +533,26 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No keywords extracted</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Tags className="w-5 h-5 text-amber-500" />
+                  Next keywords to target
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {nextKeywords.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {nextKeywords.map((kw, i) => (
+                      <Badge key={i} variant="secondary">{kw}</Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">We’ll suggest supporting keywords after your next generation.</p>
                 )}
               </CardContent>
             </Card>

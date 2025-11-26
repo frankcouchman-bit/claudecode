@@ -665,6 +665,22 @@ function mergeSections(existing: any[] = [], incoming: any[] = []) {
   return merged
 }
 
+function ensureConclusionSection(sections: any[] = [], title = "") {
+  const hasConclusion = sections.some((s) => /conclusion|final takeaways|next steps/i.test(s?.heading || ""))
+  if (hasConclusion) return sections
+
+  const topic = title || "This guide"
+  const conclusion = {
+    heading: "Conclusion: how to ship and scale",
+    paragraphs: [
+      `${topic} — your final checklist: refresh stats quarterly, add internal links to related guides, and include a clear CTA for the reader's next step.`,
+      "Re-run a SERP check every 60–90 days and expand sections that underperform. Keep FAQs fresh and align meta data with the latest insights.",
+    ],
+  }
+
+  return [...sections, conclusion]
+}
+
 function mergeFaqs(existing: any[] = [], incoming: any[] = []) {
   const seen = new Set<string>()
   const out: any[] = []
@@ -878,12 +894,12 @@ function DemoContent() {
 
       const existingSectionsRaw = Array.isArray(result.sections) ? result.sections : []
       const fallbackExisting = extractSectionsFromHtml(result.html, result.markdown)
-      const existingSections = existingSectionsRaw.length ? existingSectionsRaw : fallbackExisting
+      const existingSections = mergeSections(existingSectionsRaw, fallbackExisting)
 
       const incomingSectionsRaw = Array.isArray(normalized.sections) ? normalized.sections : []
       const fallbackIncoming = extractSectionsFromHtml(normalized.html, normalized.markdown)
-      const incomingSections = incomingSectionsRaw.length ? incomingSectionsRaw : fallbackIncoming
-      const mergedSections = mergeSections(existingSections, incomingSections)
+      const incomingSections = mergeSections(incomingSectionsRaw, fallbackIncoming)
+      const mergedSections = ensureConclusionSection(mergeSections(existingSections, incomingSections), result.title || topic)
 
       const mergedFaqs = mergeFaqs(result.faqs || [], normalized.faqs || [])
       const mergedCitations = mergeCitations(result.citations || [], normalized.citations || [])
