@@ -925,16 +925,28 @@ function DemoContent() {
 
       const existingHtml = result.html || sectionsToHtml(existingSections, result.faqs || [], result.citations || [])
       const incomingHtml = normalized.html || sectionsToHtml(incomingSections, normalized.faqs || [], normalized.citations || [])
+      const existingWordCount = stripTags(existingHtml).split(/\s+/).filter(Boolean).length
 
-      const synthesizedHtml = sectionsToHtml(mergedSections, mergedFaqs, mergedCitations)
-      const mergedHtml = ensureHtml(synthesizedHtml, [existingHtml, incomingHtml, result.markdown, normalized.markdown].filter(Boolean).join("\n\n"))
+      let finalSections = mergedSections
+      const synthesizedHtml = sectionsToHtml(finalSections, mergedFaqs, mergedCitations)
+      let mergedHtml = ensureHtml(synthesizedHtml, [existingHtml, incomingHtml, result.markdown, normalized.markdown].filter(Boolean).join("\n\n"))
 
-      const mergedWordCount = stripTags(mergedHtml || synthesizedHtml || '').split(/\s+/).filter(Boolean).length
+      let mergedWordCount = stripTags(mergedHtml || synthesizedHtml || '').split(/\s+/).filter(Boolean).length
+
+      // If the merged result is somehow shorter than the original article, prefer
+      // appending the incoming sections to the existing ones to avoid losing
+      // paragraphs when the model returns sparse data.
+      if (mergedWordCount < existingWordCount) {
+        finalSections = ensureConclusionSection(mergeSections(existingSections, incomingSections), result.title || topic)
+        const preservedHtml = sectionsToHtml(finalSections, mergedFaqs, mergedCitations)
+        mergedHtml = ensureHtml(preservedHtml, [existingHtml, incomingHtml, result.markdown, normalized.markdown].filter(Boolean).join("\n\n"))
+        mergedWordCount = stripTags(mergedHtml || preservedHtml || '').split(/\s+/).filter(Boolean).length || existingWordCount
+      }
 
       setResult({
         ...result,
         ...normalized,
-        sections: mergedSections,
+        sections: finalSections,
         faqs: mergedFaqs,
         citations: mergedCitations,
         meta_keywords: mergedKeywords,
