@@ -320,7 +320,7 @@ function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[]
   const sectionHtml = sections
     .map((section: any) => {
       if (!section) return ""
-      const heading = coerceString(section.heading || section.title).trim()
+      const heading = formatHeading(section.heading || section.title)
       const paragraphs = Array.isArray(section.paragraphs)
         ? section.paragraphs.map((p: any) => `<p>${coerceString(p).trim()}</p>`).join("\n")
         : ""
@@ -360,10 +360,16 @@ function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[]
 // When the API returns only HTML/markdown without structured sections, derive
 // section objects from the DOM so extension merges can preserve the original
 // content instead of treating it as empty.
+function formatHeading(text: string) {
+  const trimmed = coerceString(text).trim()
+  if (!trimmed) return ""
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+}
+
 function extractSectionsFromHtml(html?: string, markdown?: string) {
   const sections: { heading: string; paragraphs: string[] }[] = []
   const appendSection = (heading: string, paragraphs: string[]) => {
-    const cleanHeading = coerceString(heading).trim()
+    const cleanHeading = formatHeading(heading)
     const cleanParas = (paragraphs || []).map((p) => coerceString(p).trim()).filter(Boolean)
     if (!cleanHeading && cleanParas.length === 0) return
     sections.push({ heading: cleanHeading, paragraphs: cleanParas })
@@ -523,7 +529,7 @@ function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult
     ? base.sections
         .filter(Boolean)
         .map((section: any) => ({
-          heading: coerceString(section.heading || section.title).trim(),
+          heading: formatHeading(section.heading || section.title),
           paragraphs: Array.isArray(section.paragraphs)
             ? section.paragraphs.map((p: any) => coerceString(p).trim()).filter(Boolean)
             : [],
@@ -630,13 +636,14 @@ function mergeSections(existing: any[] = [], incoming: any[] = []) {
   const normalizeHeading = (h: string) => (h || "").trim().toLowerCase()
   const pushSection = (section: any, appendOnly = false) => {
     if (!section) return
-    const heading = normalizeHeading(section.heading || section.title || "")
+    const originalHeading = formatHeading(section.heading || section.title)
+    const headingKey = normalizeHeading(originalHeading)
     const paragraphs = Array.isArray(section.paragraphs) ? section.paragraphs.filter(Boolean).map(coerceString) : []
 
-    if (!heading && paragraphs.length === 0) return
+    if (!originalHeading && paragraphs.length === 0) return
 
-    if (seen.has(heading) && heading) {
-      const idx = seen.get(heading)!
+    if (seen.has(headingKey) && headingKey) {
+      const idx = seen.get(headingKey)!
       const current = merged[idx]
       const existingParas = new Set((current.paragraphs || []).map((p: string) => p.trim()))
       const nextParas = appendOnly ? [...current.paragraphs, ...paragraphs] : [...current.paragraphs, ...paragraphs]
@@ -652,11 +659,11 @@ function mergeSections(existing: any[] = [], incoming: any[] = []) {
     }
 
     const cleaned = {
-      heading: heading || section.heading || section.title || "",
+      heading: originalHeading || section.heading || section.title || "",
       paragraphs,
     }
     merged.push(cleaned)
-    seen.set(heading, merged.length - 1)
+    seen.set(headingKey, merged.length - 1)
   }
 
   existing.forEach((section) => pushSection(section))
@@ -899,7 +906,18 @@ function DemoContent() {
       const incomingSectionsRaw = Array.isArray(normalized.sections) ? normalized.sections : []
       const fallbackIncoming = extractSectionsFromHtml(normalized.html, normalized.markdown)
       const incomingSections = mergeSections(incomingSectionsRaw, fallbackIncoming)
-      const mergedSections = ensureConclusionSection(mergeSections(existingSections, incomingSections), result.title || topic)
+      const mergedSectionsRaw = ensureConclusionSection(mergeSections(existingSections, incomingSections), result.title || topic)
+
+      const paragraphsCount = (sections: any[] = []) =>
+        sections.reduce((count, section) => count + (Array.isArray(section?.paragraphs) ? section.paragraphs.length : 0), 0)
+
+      const mergedSections = (() => {
+        const mergedCount = paragraphsCount(mergedSectionsRaw)
+        const existingCount = paragraphsCount(existingSections)
+        if (mergedCount === 0 && existingCount > 0) return ensureConclusionSection(existingSections, result.title || topic)
+        if (mergedCount < existingCount && existingCount > 0) return ensureConclusionSection(mergeSections(existingSections, mergedSectionsRaw), result.title || topic)
+        return mergedSectionsRaw
+      })()
 
       const mergedFaqs = mergeFaqs(result.faqs || [], normalized.faqs || [])
       const mergedCitations = mergeCitations(result.citations || [], normalized.citations || [])

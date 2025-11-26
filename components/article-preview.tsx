@@ -55,6 +55,15 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     if (Array.isArray(result?.meta_keywords) && result.meta_keywords.length) return result.meta_keywords
     if (Array.isArray(result?.keywords) && result.keywords.length) return result.keywords
     if (Array.isArray(result?.seo_keywords) && result.seo_keywords.length) return result.seo_keywords
+    const suggestionBuckets = result?.keyword_suggestions
+    if (suggestionBuckets && typeof suggestionBuckets === "object") {
+      const merged = [suggestionBuckets.primary, suggestionBuckets.secondary, suggestionBuckets.long_tail, suggestionBuckets.questions]
+        .filter(Array.isArray)
+        .flat()
+        .map((kw: any) => (typeof kw === "string" ? kw : kw?.keyword || ""))
+        .filter(Boolean)
+      if (merged.length) return merged
+    }
     return [] as string[]
   }
 
@@ -101,17 +110,32 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
     if (!sections.length && !faqs.length && !citations.length) return ""
 
+    const toHeading = (text: string) => {
+      const trimmed = typeof text === "string" ? text.trim() : ""
+      if (!trimmed) return ""
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+    }
+
     const sectionHtml = sections
       .map((section: any) => {
         if (!section?.heading && !section?.paragraphs?.length) return ""
         const paragraphs = (section.paragraphs || []).map((p: string) => `<p>${sanitizeHtml(p)}</p>`).join("\n")
-        const heading = section.heading ? `<h2>${sanitizeHtml(section.heading)}</h2>` : ""
+        const headingText = section.heading ? toHeading(section.heading) : ""
+        const heading = headingText ? `<h2>${sanitizeHtml(headingText)}</h2>` : ""
         return `<section>${heading}${paragraphs}</section>`
       })
       .join("\n")
 
     const faqHtml = faqs.length
-      ? ["<h2>FAQs</h2>", ...faqs.map((f: any) => `<h3>${sanitizeHtml(f.q)}</h3><p>${sanitizeHtml(f.a)}</p>`)].join("\n")
+      ? [
+          "<h2>FAQs</h2>",
+          ...faqs.map((f: any) => {
+            const question = f?.question || f?.q
+            const answer = f?.answer || f?.a
+            if (!question || !answer) return ""
+            return `<h3>${sanitizeHtml(question)}</h3><p>${sanitizeHtml(answer)}</p>`
+          }),
+        ].join("\n")
       : ""
 
     const citationHtml = citations.length
