@@ -639,7 +639,7 @@ function mergeSections(existing: any[] = [], incoming: any[] = []) {
       const idx = seen.get(heading)!
       const current = merged[idx]
       const existingParas = new Set((current.paragraphs || []).map((p: string) => p.trim()))
-      const nextParas = appendOnly ? paragraphs : [...current.paragraphs, ...paragraphs]
+      const nextParas = appendOnly ? [...current.paragraphs, ...paragraphs] : [...current.paragraphs, ...paragraphs]
       current.paragraphs = nextParas.filter((p: string) => {
         const key = p.trim()
         if (!key) return false
