@@ -357,6 +357,65 @@ function sectionsToHtml(sections: any[] = [], faqs: any[] = [], citations: any[]
   return `<article>${sectionHtml}${faqsHtml}${citationsHtml}</article>`
 }
 
+// When the API returns only HTML/markdown without structured sections, derive
+// section objects from the DOM so extension merges can preserve the original
+// content instead of treating it as empty.
+function extractSectionsFromHtml(html?: string, markdown?: string) {
+  const sections: { heading: string; paragraphs: string[] }[] = []
+  const appendSection = (heading: string, paragraphs: string[]) => {
+    const cleanHeading = coerceString(heading).trim()
+    const cleanParas = (paragraphs || []).map((p) => coerceString(p).trim()).filter(Boolean)
+    if (!cleanHeading && cleanParas.length === 0) return
+    sections.push({ heading: cleanHeading, paragraphs: cleanParas })
+  }
+
+  try {
+    if (typeof window !== "undefined" && typeof DOMParser !== "undefined" && html) {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(html, "text/html")
+      const headings = Array.from(doc.querySelectorAll("h1, h2, h3"))
+      if (headings.length) {
+        headings.forEach((headingEl, idx) => {
+          const headingText = headingEl.textContent || ""
+          const paragraphs: string[] = []
+          let sibling = headingEl.nextElementSibling
+          while (sibling && !/H[1-3]/i.test(sibling.tagName)) {
+            if (sibling.tagName === "P" || sibling.tagName === "UL" || sibling.tagName === "OL") {
+              const text = sibling.textContent || ""
+              if (text.trim()) paragraphs.push(text)
+            }
+            sibling = sibling.nextElementSibling
+          }
+          appendSection(headingText, paragraphs)
+        })
+      }
+    }
+  } catch {
+    // Fall through to markdown parsing if DOM parsing fails
+  }
+
+  if (sections.length === 0 && markdown) {
+    const lines = markdown.split(/\r?\n/)
+    let currentHeading = ""
+    let buffer: string[] = []
+    const flush = () => {
+      appendSection(currentHeading, buffer)
+      buffer = []
+    }
+    lines.forEach((line) => {
+      if (/^##\s+/.test(line)) {
+        flush()
+        currentHeading = line.replace(/^##\s+/, "").trim()
+      } else if (line.trim()) {
+        buffer.push(line.trim())
+      }
+    })
+    flush()
+  }
+
+  return sections
+}
+
 function normalizeDraftResult(raw: any, context: DraftContext = {}): DraftResult {
   if (!raw) return null
 
@@ -817,8 +876,13 @@ function DemoContent() {
       updateQuota(updatedQuota)
       setTimeout(() => syncWithBackend(), 500)
 
-      const existingSections = Array.isArray(result.sections) ? result.sections : []
-      const incomingSections = Array.isArray(normalized.sections) ? normalized.sections : []
+      const existingSectionsRaw = Array.isArray(result.sections) ? result.sections : []
+      const fallbackExisting = extractSectionsFromHtml(result.html, result.markdown)
+      const existingSections = existingSectionsRaw.length ? existingSectionsRaw : fallbackExisting
+
+      const incomingSectionsRaw = Array.isArray(normalized.sections) ? normalized.sections : []
+      const fallbackIncoming = extractSectionsFromHtml(normalized.html, normalized.markdown)
+      const incomingSections = incomingSectionsRaw.length ? incomingSectionsRaw : fallbackIncoming
       const mergedSections = mergeSections(existingSections, incomingSections)
 
       const mergedFaqs = mergeFaqs(result.faqs || [], normalized.faqs || [])
@@ -828,12 +892,10 @@ function DemoContent() {
       const existingHtml = result.html || sectionsToHtml(existingSections, result.faqs || [], result.citations || [])
       const incomingHtml = normalized.html || sectionsToHtml(incomingSections, normalized.faqs || [], normalized.citations || [])
 
-      const mergedHtml = ensureHtml(
-        sectionsToHtml(mergedSections, mergedFaqs, mergedCitations),
-        [existingHtml, incomingHtml, result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
-      )
+      const synthesizedHtml = sectionsToHtml(mergedSections, mergedFaqs, mergedCitations)
+      const mergedHtml = ensureHtml(synthesizedHtml, [existingHtml, incomingHtml, result.markdown, normalized.markdown].filter(Boolean).join("\n\n"))
 
-      const mergedWordCount = stripTags(mergedHtml || '').split(/\s+/).filter(Boolean).length
+      const mergedWordCount = stripTags(mergedHtml || synthesizedHtml || '').split(/\s+/).filter(Boolean).length
 
       setResult({
         ...result,
