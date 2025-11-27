@@ -52,6 +52,13 @@ export default function Demo() {
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // Ensure selected word count remains valid when plan or options change
+  useEffect(() => {
+    if (!wordOptions.includes(wordCount)) {
+      setWordCount(wordOptions[wordOptions.length - 1])
+    }
+  }, [wordOptions, wordCount])
+
   async function run() {
     if (!topic.trim()) {
       setError("Please enter a topic")
@@ -297,9 +304,3 @@ export default function Demo() {
     </div>
   )
 }
-  // Ensure selected word count remains valid when plan or options change
-  useEffect(() => {
-    if (!wordOptions.includes(wordCount)) {
-      setWordCount(wordOptions[wordOptions.length - 1])
-    }
-  }, [wordOptions, wordCount])
