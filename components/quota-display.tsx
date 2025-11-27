@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AnimatedProgress, AnimatedBadge } from "@/components/animated-counter"
-import { getQuota, type QuotaLimits } from "@/lib/quota-enforcement"
+import { getQuota, type QuotaLimits, FREE_ARTICLES_PER_DAY, PRO_ARTICLES_PER_DAY, FREE_TOOLS_PER_DAY, PRO_TOOLS_PER_DAY, FREE_ARTICLES_PER_MONTH } from "@/lib/quota-enforcement"
 import { Zap, Crown, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 
@@ -34,9 +34,7 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
     setQuota(currentQuota)
 
     // Show upgrade prompt if free user is running low
-    const weekKey = getWeekKey(new Date())
-    const usedThisWeek = currentQuota.lastWeekKey === weekKey ? currentQuota.weekGenerations || 0 : 0
-    if (isAuthenticated && currentQuota.plan === 'free' && usedThisWeek >= 1) {
+    if (isAuthenticated && currentQuota.plan === 'free' && currentQuota.todayGenerations >= FREE_ARTICLES_PER_DAY) {
       setShowUpgradePrompt(true)
     }
   }, [isAuthenticated])
@@ -44,9 +42,8 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
   if (!quota) return null
 
   const isPro = quota.plan === 'pro'
-  const weekKey = getWeekKey(new Date())
-  const articlesMax = isPro ? 5 : (quota.articlesPerWeek || 1)
-  const articlesUsed = isPro ? quota.todayGenerations : (quota.lastWeekKey === weekKey ? quota.weekGenerations || 0 : 0)
+  const articlesMax = isPro ? PRO_ARTICLES_PER_DAY : FREE_ARTICLES_PER_DAY
+  const articlesUsed = quota.todayGenerations
   const articlesRemaining = articlesMax - articlesUsed
   const percentage = (articlesUsed / articlesMax) * 100
 
@@ -95,12 +92,10 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                 showLabel={false}
               />
               <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                <p>{isPro ? 'Resets daily at midnight' : 'Resets weekly (Sun → Mon)'}</p>
-                {!isPro && (
-                  <p className="text-[11px]">
-                    {Math.max(0, (quota.articlesPerMonth || 4) - quota.monthGenerations)} of {quota.articlesPerMonth || 4} free monthly generations remaining
-                  </p>
-                )}
+                <p>Resets daily at midnight</p>
+                <p className="text-[11px]">
+                  {Math.max(0, (quota.articlesPerMonth || FREE_ARTICLES_PER_MONTH) - quota.monthGenerations)} of {quota.articlesPerMonth || FREE_ARTICLES_PER_MONTH} monthly generations remaining
+                </p>
               </div>
             </div>
 
@@ -110,12 +105,12 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Tool Usage</span>
                   <span className="text-xs text-muted-foreground">
-                    {(isPro ? 10 : 1) - quota.toolsToday} left
+                    {(isPro ? PRO_TOOLS_PER_DAY : FREE_TOOLS_PER_DAY) - quota.toolsToday} left
                   </span>
                 </div>
                 <AnimatedProgress
                   value={quota.toolsToday}
-                  max={isPro ? 10 : 1}
+                  max={isPro ? PRO_TOOLS_PER_DAY : FREE_TOOLS_PER_DAY}
                   showLabel={false}
                 />
               </div>
@@ -132,10 +127,10 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                   Upgrade to Pro for:
                 </div>
                 <ul className="text-xs space-y-1 mb-3">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    5 articles per day
-                  </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      15 articles per day
+                    </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-green-500" />
                     10 tool uses per day
@@ -197,9 +192,9 @@ export function QuotaDisplay({ isAuthenticated, onUpgrade }: QuotaDisplayProps) 
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold mb-1">Daily Limit Reached!</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Upgrade to Pro for 15 articles per day
-                    </p>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Upgrade to Pro for 15 articles per day
+                      </p>
                     <div className="flex gap-2">
                       <Link href="/pricing" className="flex-1">
                         <Button className="w-full gradient-btn text-white" size="sm">

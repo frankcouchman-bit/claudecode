@@ -100,7 +100,7 @@ export default function Page() {
     },
     {
       question: "What's the difference between free and pro plans?",
-      answer: "Free includes 1 article per week and 1 tool per day with AI hero images and core SEO data. Pro ($24/mo) unlocks 5 articles per day, 10 tool runs per day, stronger research, and faster support."
+      answer: "Free includes 1 article per day and 1 tool per day with AI hero images and core SEO data. Pro ($24/mo) unlocks 15 articles per day, 10 tool runs per day, stronger research, and faster support."
     }
   ]
 
@@ -175,7 +175,7 @@ export default function Page() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span>1 article per week free</span>
+                <span>1 article per day free</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -335,7 +335,7 @@ export default function Page() {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            No credit card required • 1 article per week free • Cancel anytime
+            No credit card required • 1 article per day free • Cancel anytime
           </p>
         </div>
       </section>

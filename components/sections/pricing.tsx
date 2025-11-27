@@ -15,7 +15,7 @@ export function Pricing() {
       period: "Forever",
       description: "Perfect for trying out SEOScribe",
       features: [
-        "1 article per week",
+        "1 article per day",
         "1 tool use per day",
         "AI-generated hero images",
         "Basic SERP research",
@@ -33,7 +33,7 @@ export function Pricing() {
       period: "per month",
       description: "Everything you need to dominate SERPs",
       features: [
-        "5 articles per day",
+        "115 articles per day",
         "10 tool uses per day",
         "AI-generated hero images",
         "Advanced SERP research",

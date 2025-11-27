@@ -109,7 +109,7 @@ export default function Page() {
     },
     {
       question: "How many articles can I generate per month?",
-      answer: "Free plan includes 1 article per week and 1 tool per week with AI-generated hero images. Pro plan offers 10 articles per day and 5 tools per day, letting you scale your content production without limits."
+      answer: "Free plan includes 1 article per day and 1 tool per week with AI-generated hero images. Pro plan offers 10 articles per day and 5 tools per day, letting you scale your content production without limits."
     },
     {
       question: "Does it include keyword research?",
@@ -186,7 +186,7 @@ export default function Page() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <span>1 article per week free</span>
+                <span>1 article per day free</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -374,7 +374,7 @@ export default function Page() {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            No credit card required • 1 article per week free • Cancel anytime
+            No credit card required • 1 article per day free • Cancel anytime
           </p>
         </div>
       </section>

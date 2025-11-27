@@ -7,7 +7,12 @@ import {
   getQuota,
   saveQuota,
   updatePlan,
-  type QuotaLimits
+  type QuotaLimits,
+  FREE_ARTICLES_PER_DAY,
+  PRO_ARTICLES_PER_DAY,
+  FREE_TOOLS_PER_DAY,
+  PRO_TOOLS_PER_DAY,
+  FREE_ARTICLES_PER_MONTH
 } from "@/lib/quota-enforcement"
 
 interface QuotaContextType {
@@ -40,12 +45,16 @@ export function QuotaProvider({ children }: { children: ReactNode }) {
       const profile = await getProfile()
 
       if (profile) {
+        const isPro = (profile.plan || 'free') === 'pro'
         const backendQuota = {
           ...quota,
-          plan: profile.plan || 'free',
+          plan: isPro ? 'pro' as const : 'free' as const,
           todayGenerations: profile.usage?.today?.generations || 0,
           monthGenerations: profile.usage?.month?.generations || 0,
           toolsToday: profile.tools_today || 0,
+          articlesPerDay: isPro ? PRO_ARTICLES_PER_DAY : FREE_ARTICLES_PER_DAY,
+          articlesPerMonth: isPro ? 9999 : FREE_ARTICLES_PER_MONTH,
+          toolsPerDay: isPro ? PRO_TOOLS_PER_DAY : FREE_TOOLS_PER_DAY,
         }
 
         setQuota(backendQuota)

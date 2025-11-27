@@ -835,13 +835,12 @@ function DemoContent() {
   const lockoutMessage = (() => {
     if (isAuthenticated) {
       if (quota.plan === 'free') {
-        const weekKey = new Date()
-        const usedWeek = quota.lastWeekKey === getWeekKey(weekKey) ? quota.weekGenerations || 0 : 0
-        const monthlyLeft = Math.max(0, (quota.articlesPerMonth || 4) - quota.monthGenerations)
-        return `${usedWeek}/${quota.articlesPerWeek || 1} weekly generation used • ${monthlyLeft}/${quota.articlesPerMonth || 4} left this month`
+        const dailyLeft = Math.max(0, (quota.articlesPerDay || 1) - quota.todayGenerations)
+        const monthlyLeft = Math.max(0, (quota.articlesPerMonth || 31) - quota.monthGenerations)
+        return `${dailyLeft} left today • ${monthlyLeft} left this month`
       }
       if (quota.plan === 'pro') {
-        return `${quota.todayGenerations}/${5} daily generations used`
+        return `${quota.todayGenerations}/${quota.articlesPerDay || 15} daily generations used`
       }
     }
 

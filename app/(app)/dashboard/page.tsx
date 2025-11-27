@@ -230,7 +230,7 @@ export default function Page(){
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
           <div>
             <p className="font-semibold">Welcome to Pro!</p>
-              <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 5 articles per day, 10 tool calls per day, and unlimited revisions.</p>
+              <p className="text-sm">Your account has been upgraded. You now have access to all Pro features including 15 articles per day, 10 tool calls per day, and unlimited revisions.</p>
           </div>
         </motion.div>
       )}
