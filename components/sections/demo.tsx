@@ -898,6 +898,9 @@ function DemoContent() {
       updateQuota(updatedQuota)
       setTimeout(() => syncWithBackend(), 500)
 
+      const hasParagraphs = (section: any) =>
+        Array.isArray(section?.paragraphs) && section.paragraphs.some((p: string) => coerceString(p).trim())
+
       const existingSectionsRaw = Array.isArray(result.sections) ? result.sections : []
       const fallbackExisting = extractSectionsFromHtml(result.html, result.markdown)
       const existingSections = mergeSections(existingSectionsRaw, fallbackExisting)
@@ -905,7 +908,15 @@ function DemoContent() {
       const incomingSectionsRaw = Array.isArray(normalized.sections) ? normalized.sections : []
       const fallbackIncoming = extractSectionsFromHtml(normalized.html, normalized.markdown)
       const incomingSections = mergeSections(incomingSectionsRaw, fallbackIncoming)
-      const mergedSectionsRaw = ensureConclusionSection(mergeSections(existingSections, incomingSections), result.title || topic)
+
+      // Ignore empty incoming sections that arrive without paragraphs to avoid
+      // wiping existing content; only append meaningful additions.
+      const incomingWithContent = incomingSections.filter(hasParagraphs)
+
+      const mergedSectionsRaw = ensureConclusionSection(
+        mergeSections(existingSections, incomingWithContent.length ? incomingWithContent : incomingSections),
+        result.title || topic
+      )
 
       const paragraphsCount = (sections: any[] = []) =>
         sections.reduce((count, section) => count + (Array.isArray(section?.paragraphs) ? section.paragraphs.length : 0), 0)
@@ -913,8 +924,19 @@ function DemoContent() {
       const mergedSections = (() => {
         const mergedCount = paragraphsCount(mergedSectionsRaw)
         const existingCount = paragraphsCount(existingSections)
-        if (mergedCount === 0 && existingCount > 0) return ensureConclusionSection(existingSections, result.title || topic)
-        if (mergedCount < existingCount && existingCount > 0) return ensureConclusionSection(mergeSections(existingSections, mergedSectionsRaw), result.title || topic)
+
+        // If the merge produced fewer paragraphs than we already had, stick
+        // with the existing sections and only append the incoming ones that
+        // contain real content.
+        if (mergedCount === 0 && existingCount > 0)
+          return ensureConclusionSection(existingSections, result.title || topic)
+
+        if (mergedCount < existingCount && existingCount > 0)
+          return ensureConclusionSection(
+            mergeSections(existingSections, incomingWithContent.length ? incomingWithContent : mergedSectionsRaw),
+            result.title || topic
+          )
+
         return mergedSectionsRaw
       })()
 
@@ -942,6 +964,13 @@ function DemoContent() {
         mergedWordCount = stripTags(mergedHtml || preservedHtml || '').split(/\s+/).filter(Boolean).length || existingWordCount
       }
 
+      const safeWordCount = Math.max(
+        mergedWordCount || 0,
+        existingWordCount || 0,
+        Number(normalized.word_count) || 0,
+        Number(result.word_count) || 0
+      )
+
       setResult({
         ...result,
         ...normalized,
@@ -954,8 +983,8 @@ function DemoContent() {
         markdown: [result.markdown, normalized.markdown].filter(Boolean).join("\n\n"),
         html: mergedHtml,
         image_url: normalized.image_url || result.image_url || result.image?.image_url || "",
-        word_count: mergedWordCount || normalized.word_count || result.word_count || 0,
-        reading_time_minutes: Math.max(1, Math.round((mergedWordCount || normalized.word_count || result.word_count || 0) / 220)),
+        word_count: safeWordCount,
+        reading_time_minutes: Math.max(1, Math.round(safeWordCount / 220)),
       })
     } catch (e: any) {
       setError(e?.message || "Failed to extend draft")
