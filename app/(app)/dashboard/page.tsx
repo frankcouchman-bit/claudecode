@@ -153,7 +153,8 @@ export default function Page(){
     )
   }
 
-  const isPro = profile?.plan === 'pro'
+  const normalizedPlan = profile?.plan?.toString?.().toLowerCase?.() || 'free'
+  const isPro = normalizedPlan.includes('pro')
 
   // Derive usage from articles in case the profile payload hasn't been updated yet.
   const now = new Date()
@@ -178,8 +179,8 @@ export default function Page(){
 
   const toolsToday = profile?.tool_usage_today ?? profile?.tools_today ?? 0
   const toolLimit = isPro ? 5 : 1
-  const dailyArticleLimit = isPro ? 10 : 1
-  const weeklyArticleLimit = isPro ? 70 : 1
+  const dailyArticleLimit = profile?.limits?.daily_articles ?? (isPro ? 10 : 1)
+  const weeklyArticleLimit = profile?.limits?.weekly_articles ?? (isPro ? 70 : 1)
 
   // Get recent articles (last 5)
   const recentArticles = [...articles]
@@ -261,7 +262,9 @@ export default function Page(){
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {isPro ? 'Unlimited access' : 'Limited features'}
+              {isPro
+                ? `${dailyArticleLimit} articles/day • ${toolLimit} tools/day`
+                : 'Limited features'}
             </p>
           </CardContent>
         </Card>

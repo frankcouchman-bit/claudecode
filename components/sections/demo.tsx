@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,25 +34,18 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function Demo() {
   const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
 
-  // Determine allowed word counts based on plan
-  const wordOptions = (() => {
+  // Determine allowed word counts based on plan. Memoize to keep Select stable
+  const wordOptions = useMemo(() => {
     if (!isAuthenticated) return ["1500"]
     if (quota.plan === 'free') return ["1500", "2000"]
-    // Pro plan
+    // Pro plan (quick + extended options)
     return ["1500", "2000", "2500", "3000"]
-  })()
-
-  // Ensure selected word count remains valid when plan or options change
-  useEffect(() => {
-    if (!wordOptions.includes(wordCount)) {
-      setWordCount(wordOptions[wordOptions.length - 1])
-    }
-  }, [quota.plan])
+  }, [isAuthenticated, quota.plan])
   const [topic, setTopic] = useState("")
   const [language, setLanguage] = useState("en")
   const [tone, setTone] = useState("professional")
   // Word count selection; will be constrained by plan
-  const [wordCount, setWordCount] = useState("3000")
+  const [wordCount, setWordCount] = useState(() => wordOptions[wordOptions.length - 1])
   // Optional brief/instructions to guide generation
   const [brief, setBrief] = useState("")
   const [loading, setLoading] = useState(false)
@@ -304,3 +297,9 @@ export default function Demo() {
     </div>
   )
 }
+  // Ensure selected word count remains valid when plan or options change
+  useEffect(() => {
+    if (!wordOptions.includes(wordCount)) {
+      setWordCount(wordOptions[wordOptions.length - 1])
+    }
+  }, [wordOptions, wordCount])
