@@ -77,6 +77,10 @@ export default function ArticleViewPage() {
     const currentWordCount = article.word_count || 0
     const targetWords = parseInt(targetWordCount) || 3000
 
+    const existingMarkdown = article.markdown || ""
+    const existingHtml = article.html || ""
+    const existingContent = article.content || existingMarkdown || existingHtml || ""
+
     // If target is same or less than current, warn user
     if (targetWords <= currentWordCount) {
       if (!confirm(`Current article has ${currentWordCount} words. Target is ${targetWords} words. This will regenerate (not expand) the article. Continue?`)) {
@@ -89,7 +93,6 @@ export default function ArticleViewPage() {
       setRegenerateDialogOpen(false)
 
       // Prepare existing content for expansion
-      const existingContent = article.markdown || article.html || article.content || ""
       const existingHeadings = extractHeadings(existingContent)
 
       // Expand existing article with new content
@@ -109,13 +112,22 @@ export default function ArticleViewPage() {
         expansion_instructions: `Expand the existing article from ${currentWordCount} words to approximately ${targetWords} words. Add new sections, headings, and detailed content that naturally flows from the existing content. Include additional research, examples, case studies, and deeper explanations. Maintain consistency in tone and style with the existing content.`
       })
 
+      const incomingMarkdown = expandedArticle.markdown || ""
+      const incomingHtml = expandedArticle.html || ""
+      const incomingContent = expandedArticle.content || incomingMarkdown || incomingHtml || ""
+
+      const mergedMarkdown = mergeContent(existingMarkdown, incomingMarkdown)
+      const mergedHtml = mergeContent(existingHtml, incomingHtml || incomingContent)
+      const mergedContent = mergeContent(existingContent, incomingContent)
+      const mergedWordCount = expandedArticle.word_count || countWords(mergedMarkdown || mergedContent)
+
       // Merge expanded content with existing metadata
       await updateArticle(id, {
         title: expandedArticle.title || article.title,
-        content: expandedArticle.content,
-        markdown: expandedArticle.markdown,
-        html: expandedArticle.html,
-        word_count: expandedArticle.word_count || targetWords,
+        content: mergedContent,
+        markdown: mergedMarkdown,
+        html: mergedHtml,
+        word_count: mergedWordCount || targetWords,
         meta_title: expandedArticle.meta_title || article.meta_title,
         meta_description: expandedArticle.meta_description || article.meta_description,
         keywords: expandedArticle.keywords || article.keywords,
@@ -151,6 +163,26 @@ export default function ArticleViewPage() {
       headings.push(...htmlHeadings.map(h => h.replace(/<[^>]+>/g, '')))
     }
     return headings
+  }
+
+  function mergeContent(existing: string, incoming: string): string {
+    const existingTrimmed = (existing || "").trim()
+    const incomingTrimmed = (incoming || "").trim()
+
+    if (!incomingTrimmed) return existingTrimmed
+    if (!existingTrimmed) return incomingTrimmed
+
+    if (incomingTrimmed.includes(existingTrimmed)) return incomingTrimmed
+    if (existingTrimmed.includes(incomingTrimmed)) return existingTrimmed
+
+    return `${existingTrimmed}\n\n${incomingTrimmed}`
+  }
+
+  function countWords(text: string): number {
+    return (text || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length
   }
 
   function getSEOBadgeColor(score: number) {
