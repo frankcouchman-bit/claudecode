@@ -19,6 +19,19 @@ type NormalizedArticle = {
   updated_at: string
 } & Record<string, any>
 
+function coerceText(value: any): string {
+  if (typeof value === "string") return value
+  if (value === null || value === undefined) return ""
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
+
 function mergeHeaders(input?: HeadersInit): Record<string, string> {
   if (!input) return {}
   if (input instanceof Headers) {
@@ -95,6 +108,17 @@ function normalizeArticlePayload(payload: any): NormalizedArticle | null {
     payload
 
   const article = articleCandidate as Record<string, any>
+  const markdown = coerceText(article.markdown || article.content || article.html)
+  const html = coerceText(article.html || markdown)
+  const content = coerceText(article.content || markdown || html)
+  const metaTitle = coerceText(article.meta_title || article.metaTitle)
+  const metaDescription = coerceText(article.meta_description || article.metaDescription)
+  const keywords = Array.isArray(article.keywords)
+    ? article.keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
+    : []
+  const wordCount =
+    Number(article.word_count ?? article.wordCount ?? 0) ||
+    (markdown || content || html ? (markdown || content || html).split(/\s+/).filter(Boolean).length : 0)
   const createdAt =
     article.created_at ||
     article.createdAt ||
@@ -109,9 +133,13 @@ function normalizeArticlePayload(payload: any): NormalizedArticle | null {
     id: article.id || article._id || article.uuid || "",
     title: article.title || article.headline || article.topic || "",
     topic: article.topic || article.title || "",
-    content: article.content || article.markdown || article.html || "",
-    markdown: article.markdown || "",
-    html: article.html || "",
+    content,
+    markdown,
+    html,
+    meta_title: metaTitle,
+    meta_description: metaDescription,
+    keywords,
+    word_count: wordCount,
     seo_score: Number(article.seo_score ?? article.seoScore ?? article.score ?? 0) || 0,
     created_at: createdAt,
     updated_at: updatedAt,

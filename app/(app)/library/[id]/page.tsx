@@ -37,6 +37,35 @@ export default function ArticleViewPage() {
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false)
   const [targetWordCount, setTargetWordCount] = useState("3000")
 
+  const coerceText = (value: any) => {
+    if (typeof value === "string") return value
+    if (value === null || value === undefined) return ""
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        return String(value)
+      }
+    }
+    return String(value)
+  }
+
+  const htmlContent = article
+    ? typeof article.html === "string"
+      ? article.html
+      : coerceText(article.html || article.markdown)
+    : ""
+
+  const markdownContent = article
+    ? typeof article.markdown === "string"
+      ? article.markdown
+      : coerceText(article.markdown || article.html)
+    : ""
+
+  const contentFallback = article
+    ? coerceText(article.content || markdownContent || htmlContent)
+    : ""
+
   useEffect(() => {
     if (id) {
       loadArticle()
@@ -77,9 +106,9 @@ export default function ArticleViewPage() {
     const currentWordCount = article.word_count || 0
     const targetWords = parseInt(targetWordCount) || 3000
 
-    const existingMarkdown = article.markdown || ""
-    const existingHtml = article.html || ""
-    const existingContent = article.content || existingMarkdown || existingHtml || ""
+    const existingMarkdown = coerceText(article.markdown)
+    const existingHtml = coerceText(article.html)
+    const existingContent = coerceText(article.content || existingMarkdown || existingHtml)
 
     // If target is same or less than current, warn user
     if (targetWords <= currentWordCount) {
@@ -489,18 +518,18 @@ export default function ArticleViewPage() {
               <CardTitle>Article Content</CardTitle>
             </CardHeader>
             <CardContent>
-              {article.html ? (
+              {htmlContent ? (
                 <div
                   className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-purple-600 prose-strong:text-gray-900"
-                  dangerouslySetInnerHTML={{ __html: article.html }}
+                  dangerouslySetInnerHTML={{ __html: htmlContent }}
                 />
-              ) : article.markdown ? (
+              ) : markdownContent ? (
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                  {article.markdown}
+                  {markdownContent}
                 </div>
-              ) : article.content ? (
+              ) : contentFallback ? (
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                  {article.content}
+                  {contentFallback}
                 </div>
               ) : (
                 <p className="text-gray-400 italic">No content available</p>

@@ -35,6 +35,19 @@ import { GenerationErrorBoundary } from "@/components/generation-error-boundary"
 export default function Demo() {
   const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
 
+  const coerceText = (value: any) => {
+    if (typeof value === "string") return value
+    if (value === null || value === undefined) return ""
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        return String(value)
+      }
+    }
+    return String(value)
+  }
+
   const normalizeResult = (raw: any) => {
     if (!raw) return null
     // Attempt to parse string payloads from the API
@@ -48,15 +61,17 @@ export default function Demo() {
 
     const article = (raw as any)?.article || raw
     const title = article?.title || article?.topic || topic.trim()
-    const markdown = article?.markdown || article?.content || ""
-    const html = article?.html || markdown
+    const markdown = coerceText(article?.markdown || article?.content || "")
+    const html = coerceText(article?.html || markdown)
 
     return {
       ...article,
       title,
       markdown,
       html,
-      word_count: article?.word_count || markdown.split(/\s+/).filter(Boolean).length,
+      word_count:
+        Number(article?.word_count || article?.wordCount) ||
+        (markdown ? markdown.split(/\s+/).filter(Boolean).length : 0),
     }
   }
 
