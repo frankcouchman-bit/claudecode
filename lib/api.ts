@@ -67,7 +67,16 @@ async function handle(res: Response) {
 // Generate a draft article.  Calls the /api/draft endpoint instead of the legacy generate-draft route.
 export async function generateDraft(payload:any){
   const url = `${API_BASE}/api/draft`
-  const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
+
+  // Default to Anthropic Sonnet 3.7 with Serper-backed research unless callers override.
+  const body = {
+    provider: payload?.provider ?? "anthropic",
+    model: payload?.model ?? "claude-3-7-sonnet-20250219",
+    search_provider: payload?.search_provider ?? "serper",
+    ...payload,
+  }
+
+  const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(body), cache:"no-store" }))
   return handle(res)
 }
 function normalizeArticlePayload(payload: any): NormalizedArticle | null {

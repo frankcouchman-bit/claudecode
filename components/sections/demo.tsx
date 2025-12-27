@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { generateDraft, saveArticle } from "@/lib/api"
+import { generateDraft, saveArticle, suggestInternalLinks } from "@/lib/api"
 import { ArticlePreview } from "@/components/article-preview"
 import { useQuota } from "@/contexts/quota-context"
 import {
@@ -130,6 +130,32 @@ export default function Demo() {
         throw new Error("Empty response from generator")
       }
 
+      // Backfill internal link suggestions when the generator response is missing them.
+      let enrichedResult = safeResult
+      const needsLinks =
+        (!Array.isArray(safeResult.internal_links) || safeResult.internal_links.length === 0) &&
+        Boolean(safeResult.markdown || safeResult.html)
+
+      if (needsLinks) {
+        try {
+          const linkResponse = await suggestInternalLinks({
+            topic: safeResult.title || topic.trim(),
+            text: (safeResult.markdown || safeResult.html || "").slice(0, 20000),
+          })
+
+          const incomingLinks =
+            (Array.isArray((linkResponse as any)?.links) && (linkResponse as any).links) ||
+            (Array.isArray((linkResponse as any)?.suggestions) && (linkResponse as any).suggestions) ||
+            []
+
+          if (incomingLinks.length > 0) {
+            enrichedResult = { ...safeResult, internal_links: incomingLinks }
+          }
+        } catch (linkError) {
+          console.error("Failed to fetch internal links", linkError)
+        }
+      }
+
       // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
       updateQuota(updatedQuota)
@@ -139,7 +165,7 @@ export default function Demo() {
         setTimeout(() => syncWithBackend(), 1000)
       }
 
-      setResult(safeResult)
+      setResult(enrichedResult)
     } catch (e: any) {
       console.error('Generation failed:', e)
       const errorMessage = e?.message || "Failed to generate"

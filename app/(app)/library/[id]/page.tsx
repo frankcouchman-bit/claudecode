@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { getArticle, deleteArticle, generateDraft, updateArticle } from "@/lib/api"
+import { getArticle, deleteArticle, generateDraft, updateArticle, suggestInternalLinks } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -116,6 +116,32 @@ export default function ArticleViewPage() {
       const incomingHtml = expandedArticle.html || ""
       const incomingContent = expandedArticle.content || incomingMarkdown || incomingHtml || ""
 
+      // Backfill internal links if the generation response did not include them.
+      let expandedWithLinks = expandedArticle
+      const needsLinks =
+        (!Array.isArray(expandedArticle.internal_links) || expandedArticle.internal_links.length === 0) &&
+        Boolean(incomingMarkdown || incomingHtml || incomingContent)
+
+      if (needsLinks) {
+        try {
+          const linkResponse = await suggestInternalLinks({
+            topic: expandedArticle.title || article.title || article.topic,
+            text: (incomingMarkdown || incomingHtml || incomingContent || existingContent).slice(0, 20000),
+          })
+
+          const incomingLinks =
+            (Array.isArray((linkResponse as any)?.links) && (linkResponse as any).links) ||
+            (Array.isArray((linkResponse as any)?.suggestions) && (linkResponse as any).suggestions) ||
+            []
+
+          if (incomingLinks.length > 0) {
+            expandedWithLinks = { ...expandedArticle, internal_links: incomingLinks }
+          }
+        } catch (linkError) {
+          console.error("Failed to fetch internal links", linkError)
+        }
+      }
+
       const mergedMarkdown = mergeContent(existingMarkdown, incomingMarkdown)
       const mergedHtml = mergeContent(existingHtml, incomingHtml || incomingContent)
       const mergedContent = mergeContent(existingContent, incomingContent)
@@ -132,7 +158,7 @@ export default function ArticleViewPage() {
         meta_description: expandedArticle.meta_description || article.meta_description,
         keywords: expandedArticle.keywords || article.keywords,
         citations: [...(article.citations || []), ...(expandedArticle.citations || [])],
-        internal_links: [...(article.internal_links || []), ...(expandedArticle.internal_links || [])],
+        internal_links: [...(article.internal_links || []), ...(expandedWithLinks.internal_links || [])],
         faqs: [...(article.faqs || []), ...(expandedArticle.faqs || [])],
         seo_score: expandedArticle.seo_score || article.seo_score,
         updated_at: new Date().toISOString()
