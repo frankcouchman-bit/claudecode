@@ -60,9 +60,22 @@ export default function Demo() {
     }
 
     const article = (raw as any)?.article || raw
+    const seoMeta = (article && typeof (article as any).seo === "object") ? (article as any).seo : undefined
     const title = article?.title || article?.topic || topic.trim()
 
     const resolveContent = () => {
+      const sectionBlocks = Array.isArray((article as any)?.sections) ? (article as any).sections : null
+
+      if (sectionBlocks && sectionBlocks.length > 0) {
+        return sectionBlocks
+          .map((section: any) => {
+            const heading = coerceText(section?.heading || section?.title || "")
+            const body = coerceText(section?.content || section?.body || section?.text || "")
+            return `${heading ? `## ${heading}\n\n` : ""}${body}`
+          })
+          .join("\n\n")
+      }
+
       const candidates = [
         article?.html,
         article?.markdown,
@@ -89,11 +102,20 @@ export default function Demo() {
     const html = markdown
 
     const seoScoreCandidate =
-      article?.seo_score ?? article?.seoScore ?? article?.score ?? article?.grade ?? article?.overall
+      article?.seo_score ??
+      article?.seoScore ??
+      article?.score ??
+      article?.grade ??
+      article?.overall ??
+      seoMeta?.overall ??
+      seoMeta?.score ??
+      seoMeta?.grade
 
     const safeKeywords = Array.isArray(article?.keywords)
       ? article.keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
-      : []
+      : Array.isArray(seoMeta?.keywords)
+        ? seoMeta.keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
+        : []
 
     const safeMetaKeywords = Array.isArray(article?.meta_keywords)
       ? article.meta_keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
@@ -121,7 +143,7 @@ export default function Demo() {
             ) || 0
           : Number(seoScoreCandidate) || 0,
       word_count:
-        Number(article?.word_count || article?.wordCount) ||
+        Number(article?.word_count || article?.wordCount || seoMeta?.word_count) ||
         (markdown ? markdown.split(/\s+/).filter(Boolean).length : 0),
     }
   }
@@ -172,18 +194,24 @@ export default function Demo() {
     setResult(null)
     setLoading(true)
     try {
+      const desiredWords = parseInt(wordCount) || 3000
+      const seoBrief = `Write a deeply researched, long-form article of at least ${desiredWords} words with rich H2/H3 structure, skimmable bullet lists, examples, and step-by-step guidance. Include an introduction, concluding CTA, concise meta title/description, keyword list, and 4–6 FAQs. Aim for high readability with short paragraphs and bold subheadings. Add a clear hero image description tied to the topic and suggest 3–5 internal links when possible.`
+      const combinedBrief = brief.trim()
+        ? `${brief.trim()}\n\n${seoBrief}`
+        : seoBrief
+
       console.log('Generating article with payload:', {
         topic: topic.trim(),
         tone,
         language,
-        target_word_count: parseInt(wordCount) || 3000
+        target_word_count: desiredWords
       })
 
       const r = await generateDraft({
         topic: topic.trim(),
         tone: tone,
         language: language,
-        target_word_count: parseInt(wordCount) || 3000,
+        target_word_count: desiredWords,
         research: true,
         generate_social: true,
         generate_image: true,
@@ -192,7 +220,7 @@ export default function Demo() {
         model: "anthropic/claude-3.7-sonnet-20250219",
         search_provider: "serper",
         // Include optional brief/instructions if provided
-        brief: brief.trim() || undefined
+        brief: combinedBrief
       })
 
       console.log('Generation successful:', r)

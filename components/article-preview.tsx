@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { saveArticle } from "@/lib/api"
+import DOMPurify from "isomorphic-dompurify"
+import { renderMarkdownToHtml } from "@/lib/render-markdown"
 import { useQuota } from "@/contexts/quota-context"
 import { motion } from "framer-motion"
 import {
@@ -54,6 +56,22 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   }
 
   const resolveContent = () => {
+    const sectionBlocks = Array.isArray((result as any)?.sections)
+      ? (result as any).sections
+      : Array.isArray((result as any)?.article?.sections)
+        ? (result as any).article.sections
+        : null
+
+    if (sectionBlocks && sectionBlocks.length > 0) {
+      return sectionBlocks
+        .map((section: any) => {
+          const heading = coerceText(section?.heading || section?.title || "")
+          const body = coerceText(section?.content || section?.body || section?.text || "")
+          return `${heading ? `## ${heading}\n\n` : ""}${body}`
+        })
+        .join("\n\n")
+    }
+
     const candidates = [
       result?.html,
       result?.markdown,
@@ -81,18 +99,25 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   }
 
   const rawContent = resolveContent()
-  const normalizedContent = rawContent.trim().length > 0 ? rawContent : coerceText(rawContent)
+  const normalizedContent = typeof rawContent === "string" && rawContent.trim().length > 0
+    ? rawContent
+    : coerceText(rawContent)
 
-  const htmlContent = normalizedContent || ""
   const markdownContent = typeof result?.markdown === "string" && result.markdown.trim().length > 0
     ? result.markdown
-    : htmlContent
+    : normalizedContent
 
-  const displayHtml = /<\w+/i.test(htmlContent)
-    ? htmlContent
-    : htmlContent.replace(/\n/g, "<br />")
+  const renderedHtml = /<\w+/i.test(normalizedContent)
+    ? normalizedContent
+    : renderMarkdownToHtml(normalizedContent)
 
-  const safeWordCount = Number(result?.word_count ?? result?.wordCount ?? 0) || 0
+  const htmlContent = DOMPurify.sanitize(renderedHtml || "")
+  const displayHtml = htmlContent
+
+  const computedWordCount = markdownContent
+    ? markdownContent.split(/\s+/).filter(Boolean).length
+    : 0
+  const safeWordCount = Number(result?.word_count ?? result?.wordCount ?? computedWordCount) || computedWordCount
   const safeSeoScore = Number(result?.seo_score ?? result?.seoScore ?? 0) || 0
   const safeMetaTitle = coerceText(result?.meta_title || result?.metaTitle || result?.title)
   const safeMetaDescription = coerceText(result?.meta_description || result?.metaDescription)
@@ -356,7 +381,8 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               {displayHtml.trim().length > 0 ? (
                 <div
                   className="prose prose-lg dark:prose-invert max-w-none
-                             prose-headings:font-bold prose-headings:gradient-text
+                             prose-headings:font-black prose-headings:tracking-tight prose-headings:text-gray-900 dark:prose-headings:text-white
+                             prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-h4:text-xl
                              prose-p:text-muted-foreground prose-p:leading-relaxed
                              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                              prose-img:rounded-lg prose-img:shadow-md

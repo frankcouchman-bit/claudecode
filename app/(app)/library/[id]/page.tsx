@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import DOMPurify from "isomorphic-dompurify"
+import { renderMarkdownToHtml } from "@/lib/render-markdown"
 import {
   ArrowLeft,
   Edit,
@@ -50,21 +52,28 @@ export default function ArticleViewPage() {
     return String(value)
   }
 
-  const htmlContent = article
+  const rawHtml = article
     ? typeof article.html === "string"
       ? article.html
-      : coerceText(article.html || article.markdown)
+      : coerceText(article.html || "")
     : ""
 
-  const markdownContent = article
+  const rawMarkdown = article
     ? typeof article.markdown === "string"
       ? article.markdown
-      : coerceText(article.markdown || article.html)
+      : coerceText(article.markdown || "")
     : ""
 
   const contentFallback = article
-    ? coerceText(article.content || markdownContent || htmlContent)
+    ? coerceText(article.content || rawMarkdown || rawHtml)
     : ""
+
+  const combinedSource = rawHtml || rawMarkdown || contentFallback
+  const htmlContent = /<\w+/i.test(combinedSource)
+    ? DOMPurify.sanitize(combinedSource)
+    : renderMarkdownToHtml(combinedSource)
+
+  const markdownContent = rawMarkdown || contentFallback
 
   useEffect(() => {
     if (id) {
@@ -134,8 +143,8 @@ export default function ArticleViewPage() {
         generate_social: true,
         generate_image: true,
         generate_faqs: true,
-        provider: "anthropic",
-        model: "claude-3-7-sonnet-20250219",
+        provider: "openrouter",
+        model: "anthropic/claude-3.7-sonnet-20250219",
         search_provider: "serper",
         // Include existing content so AI can expand it naturally
         existing_content: existingContent,
