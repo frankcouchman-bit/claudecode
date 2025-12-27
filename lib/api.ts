@@ -1,6 +1,11 @@
 import { getAccessToken } from "@/lib/auth"
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://seoscribe.frank-couchman.workers.dev"
+// Support both NEXT_PUBLIC_API_URL (Next.js convention) and PUBLIC_API_URL (Cloudflare/Netlify env)
+// so deployments that only set PUBLIC_API_URL still call the correct worker endpoint.
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.PUBLIC_API_URL ||
+  "https://seoscribe.frank-couchman.workers.dev"
 
 type NormalizedArticle = {
   id: string
@@ -65,18 +70,21 @@ async function handle(res: Response) {
   return rawText
 }
 // Generate a draft article.  Calls the /api/draft endpoint instead of the legacy generate-draft route.
-export async function generateDraft(payload:any){
+export async function generateDraft(payload: any) {
   const url = `${API_BASE}/api/draft`
 
   // Default to Anthropic Sonnet 3.7 with Serper-backed research unless callers override.
   const body = {
-    provider: payload?.provider ?? "anthropic",
-    model: payload?.model ?? "claude-3-7-sonnet-20250219",
-    search_provider: payload?.search_provider ?? "serper",
+    provider: payload?.provider || "anthropic",
+    model: payload?.model || "claude-3-7-sonnet-20250219",
+    search_provider: payload?.search_provider || "serper",
     ...payload,
   }
 
-  const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(body), cache:"no-store" }))
+  const res = await fetch(
+    url,
+    withAuthHeaders({ method: "POST", body: JSON.stringify(body), cache: "no-store" })
+  )
   return handle(res)
 }
 function normalizeArticlePayload(payload: any): NormalizedArticle | null {

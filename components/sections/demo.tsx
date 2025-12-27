@@ -119,6 +119,9 @@ export default function Demo() {
         generate_social: true,
         generate_image: true,
         generate_faqs: true,
+        provider: "anthropic",
+        model: "claude-3-7-sonnet-20250219",
+        search_provider: "serper",
         // Include optional brief/instructions if provided
         brief: brief.trim() || undefined
       })
