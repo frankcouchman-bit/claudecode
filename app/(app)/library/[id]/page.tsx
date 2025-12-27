@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { getArticle, deleteArticle, generateDraft, updateArticle } from "@/lib/api"
+import { getArticle, deleteArticle, generateDraft, updateArticle, suggestInternalLinks } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +36,35 @@ export default function ArticleViewPage() {
   const [regenerating, setRegenerating] = useState(false)
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false)
   const [targetWordCount, setTargetWordCount] = useState("3000")
+
+  const coerceText = (value: any) => {
+    if (typeof value === "string") return value
+    if (value === null || value === undefined) return ""
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        return String(value)
+      }
+    }
+    return String(value)
+  }
+
+  const htmlContent = article
+    ? typeof article.html === "string"
+      ? article.html
+      : coerceText(article.html || article.markdown)
+    : ""
+
+  const markdownContent = article
+    ? typeof article.markdown === "string"
+      ? article.markdown
+      : coerceText(article.markdown || article.html)
+    : ""
+
+  const contentFallback = article
+    ? coerceText(article.content || markdownContent || htmlContent)
+    : ""
 
   useEffect(() => {
     if (id) {
@@ -77,6 +106,10 @@ export default function ArticleViewPage() {
     const currentWordCount = article.word_count || 0
     const targetWords = parseInt(targetWordCount) || 3000
 
+    const existingMarkdown = coerceText(article.markdown)
+    const existingHtml = coerceText(article.html)
+    const existingContent = coerceText(article.content || existingMarkdown || existingHtml)
+
     // If target is same or less than current, warn user
     if (targetWords <= currentWordCount) {
       if (!confirm(`Current article has ${currentWordCount} words. Target is ${targetWords} words. This will regenerate (not expand) the article. Continue?`)) {
@@ -89,7 +122,6 @@ export default function ArticleViewPage() {
       setRegenerateDialogOpen(false)
 
       // Prepare existing content for expansion
-      const existingContent = article.markdown || article.html || article.content || ""
       const existingHeadings = extractHeadings(existingContent)
 
       // Expand existing article with new content
@@ -102,6 +134,9 @@ export default function ArticleViewPage() {
         generate_social: true,
         generate_image: true,
         generate_faqs: true,
+        provider: "anthropic",
+        model: "claude-3-7-sonnet-20250219",
+        search_provider: "serper",
         // Include existing content so AI can expand it naturally
         existing_content: existingContent,
         existing_headings: existingHeadings,
@@ -109,18 +144,53 @@ export default function ArticleViewPage() {
         expansion_instructions: `Expand the existing article from ${currentWordCount} words to approximately ${targetWords} words. Add new sections, headings, and detailed content that naturally flows from the existing content. Include additional research, examples, case studies, and deeper explanations. Maintain consistency in tone and style with the existing content.`
       })
 
+      const incomingMarkdown = expandedArticle.markdown || ""
+      const incomingHtml = expandedArticle.html || ""
+      const incomingContent = expandedArticle.content || incomingMarkdown || incomingHtml || ""
+
+      // Backfill internal links if the generation response did not include them.
+      let expandedWithLinks = expandedArticle
+      const needsLinks =
+        (!Array.isArray(expandedArticle.internal_links) || expandedArticle.internal_links.length === 0) &&
+        Boolean(incomingMarkdown || incomingHtml || incomingContent)
+
+      if (needsLinks) {
+        try {
+          const linkResponse = await suggestInternalLinks({
+            topic: expandedArticle.title || article.title || article.topic,
+            text: (incomingMarkdown || incomingHtml || incomingContent || existingContent).slice(0, 20000),
+          })
+
+          const incomingLinks =
+            (Array.isArray((linkResponse as any)?.links) && (linkResponse as any).links) ||
+            (Array.isArray((linkResponse as any)?.suggestions) && (linkResponse as any).suggestions) ||
+            []
+
+          if (incomingLinks.length > 0) {
+            expandedWithLinks = { ...expandedArticle, internal_links: incomingLinks }
+          }
+        } catch (linkError) {
+          console.error("Failed to fetch internal links", linkError)
+        }
+      }
+
+      const mergedMarkdown = mergeContent(existingMarkdown, incomingMarkdown)
+      const mergedHtml = mergeContent(existingHtml, incomingHtml || incomingContent)
+      const mergedContent = mergeContent(existingContent, incomingContent)
+      const mergedWordCount = expandedArticle.word_count || countWords(mergedMarkdown || mergedContent)
+
       // Merge expanded content with existing metadata
       await updateArticle(id, {
         title: expandedArticle.title || article.title,
-        content: expandedArticle.content,
-        markdown: expandedArticle.markdown,
-        html: expandedArticle.html,
-        word_count: expandedArticle.word_count || targetWords,
+        content: mergedContent,
+        markdown: mergedMarkdown,
+        html: mergedHtml,
+        word_count: mergedWordCount || targetWords,
         meta_title: expandedArticle.meta_title || article.meta_title,
         meta_description: expandedArticle.meta_description || article.meta_description,
         keywords: expandedArticle.keywords || article.keywords,
         citations: [...(article.citations || []), ...(expandedArticle.citations || [])],
-        internal_links: [...(article.internal_links || []), ...(expandedArticle.internal_links || [])],
+        internal_links: [...(article.internal_links || []), ...(expandedWithLinks.internal_links || [])],
         faqs: [...(article.faqs || []), ...(expandedArticle.faqs || [])],
         seo_score: expandedArticle.seo_score || article.seo_score,
         updated_at: new Date().toISOString()
@@ -151,6 +221,26 @@ export default function ArticleViewPage() {
       headings.push(...htmlHeadings.map(h => h.replace(/<[^>]+>/g, '')))
     }
     return headings
+  }
+
+  function mergeContent(existing: string, incoming: string): string {
+    const existingTrimmed = (existing || "").trim()
+    const incomingTrimmed = (incoming || "").trim()
+
+    if (!incomingTrimmed) return existingTrimmed
+    if (!existingTrimmed) return incomingTrimmed
+
+    if (incomingTrimmed.includes(existingTrimmed)) return incomingTrimmed
+    if (existingTrimmed.includes(incomingTrimmed)) return existingTrimmed
+
+    return `${existingTrimmed}\n\n${incomingTrimmed}`
+  }
+
+  function countWords(text: string): number {
+    return (text || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length
   }
 
   function getSEOBadgeColor(score: number) {
@@ -428,18 +518,18 @@ export default function ArticleViewPage() {
               <CardTitle>Article Content</CardTitle>
             </CardHeader>
             <CardContent>
-              {article.html ? (
+              {htmlContent ? (
                 <div
                   className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-purple-600 prose-strong:text-gray-900"
-                  dangerouslySetInnerHTML={{ __html: article.html }}
+                  dangerouslySetInnerHTML={{ __html: htmlContent }}
                 />
-              ) : article.markdown ? (
+              ) : markdownContent ? (
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                  {article.markdown}
+                  {markdownContent}
                 </div>
-              ) : article.content ? (
+              ) : contentFallback ? (
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                  {article.content}
+                  {contentFallback}
                 </div>
               ) : (
                 <p className="text-gray-400 italic">No content available</p>

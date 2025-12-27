@@ -40,6 +40,38 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const coerceText = (value: any) => {
+    if (typeof value === "string") return value
+    if (value === null || value === undefined) return ""
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        return String(value)
+      }
+    }
+    return String(value)
+  }
+
+  const htmlContent =
+    typeof result?.html === "string"
+      ? result.html
+      : typeof result?.markdown === "string"
+        ? result.markdown
+        : coerceText(result?.html || result?.markdown)
+
+  const markdownContent =
+    typeof result?.markdown === "string"
+      ? result.markdown
+      : typeof result?.html === "string"
+        ? result.html
+        : coerceText(result?.markdown || result?.html)
+
+  const safeWordCount = Number(result?.word_count ?? result?.wordCount ?? 0) || 0
+  const safeSeoScore = Number(result?.seo_score ?? result?.seoScore ?? 0) || 0
+  const safeMetaTitle = coerceText(result?.meta_title || result?.metaTitle || result?.title)
+  const safeMetaDescription = coerceText(result?.meta_description || result?.metaDescription)
+
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
     setCopied(label)
@@ -66,9 +98,9 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     try {
         const response = await saveArticle({
         title: result.title,
-        content: result.html || result.markdown,
-        markdown: result.markdown,
-        html: result.html,
+        content: htmlContent || markdownContent,
+        markdown: markdownContent,
+        html: htmlContent,
         meta_title: result.meta_title,
         meta_description: result.meta_description,
                 meta_keywords: Array.isArray(result.meta_keywords) ? result.meta_keywords : Array.isArray(result.keywords) ? result.keywords : [],
@@ -109,16 +141,16 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Generated Successfully
                 </Badge>
-                {result?.word_count && (
+                {safeWordCount > 0 && (
                   <Badge variant="outline">
                     <FileText className="w-3 h-3 mr-1" />
-                    {result.word_count.toLocaleString()} words
+                    {safeWordCount.toLocaleString()} words
                   </Badge>
                 )}
-                {result?.seo_score !== undefined && (
-                  <Badge className={result.seo_score >= 80 ? "bg-green-500 text-white" : result.seo_score >= 60 ? "bg-yellow-500 text-white" : "bg-red-500 text-white"}>
+                {Number.isFinite(safeSeoScore) && (
+                  <Badge className={safeSeoScore >= 80 ? "bg-green-500 text-white" : safeSeoScore >= 60 ? "bg-yellow-500 text-white" : "bg-red-500 text-white"}>
                     <TrendingUp className="w-3 h-3 mr-1" />
-                    SEO: {result.seo_score}/100
+                    SEO: {safeSeoScore}/100
                   </Badge>
                 )}
                 {result?.readability_score && (
@@ -130,7 +162,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </div>
               <CardTitle className="text-3xl mb-2">{result?.title || "Your Article"}</CardTitle>
               {result?.meta_description && (
-                <p className="text-muted-foreground">{result.meta_description}</p>
+                <p className="text-muted-foreground">{safeMetaDescription}</p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -164,7 +196,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(result?.html || result?.markdown || '', 'article')}
+                onClick={() => copyToClipboard(htmlContent || markdownContent || '', 'article')}
               >
                 {copied === 'article' ? (
                   <>
@@ -181,7 +213,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile(result?.markdown || result?.html || '', `${result?.title || 'article'}.md`, 'text/markdown')}
+                onClick={() => downloadFile(markdownContent || htmlContent || '', `${result?.title || 'article'}.md`, 'text/markdown')}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Markdown
@@ -189,7 +221,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile(result?.html || '', `${result?.title || 'article'}.html`, 'text/html')}
+                onClick={() => downloadFile(htmlContent || '', `${result?.title || 'article'}.html`, 'text/html')}
               >
                 <Download className="mr-2 h-4 w-4" />
                 HTML
@@ -242,7 +274,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                            prose-img:rounded-lg prose-img:shadow-md
                            prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
-                dangerouslySetInnerHTML={{ __html: result?.html || "" }}
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
               />
             </CardContent>
           </Card>
@@ -307,12 +339,12 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>SEO Score</span>
-                  <span className="font-semibold">{result?.seo_score || 0}/100</span>
+                  <span className="font-semibold">{safeSeoScore}/100</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
                   <div
                     className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all"
-                    style={{ width: `${result?.seo_score || 0}%` }}
+                    style={{ width: `${safeSeoScore}%` }}
                   />
                 </div>
               </div>
@@ -353,28 +385,31 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   postsArray = Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
                 }
                 if (postsArray.length > 0) {
-                  return postsArray.map((post: any, i: number) => (
-                    <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="capitalize">
-                          <Globe className="w-3 h-3 mr-1" />
-                          {post.platform || 'General'}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(post.content, `social-${i}`)}
-                        >
-                          {copied === `social-${i}` ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
+                  return postsArray.map((post: any, i: number) => {
+                    const content = coerceText(post.content)
+                    return (
+                      <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="capitalize">
+                            <Globe className="w-3 h-3 mr-1" />
+                            {post.platform || 'General'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(content, `social-${i}`)}
+                          >
+                            {copied === `social-${i}` ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-sm">{content}</p>
                       </div>
-                      <p className="text-sm">{post.content}</p>
-                    </div>
-                  ))
+                    )
+                  })
                 }
                 return <p className="text-sm text-muted-foreground">No social posts generated</p>
               })()}
@@ -455,7 +490,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 <div>
                   <label className="text-sm font-semibold">Title Tag</label>
                   <div className="mt-1 p-3 rounded-lg bg-muted/50 border font-mono text-sm">
-                    {result.meta_title}
+                    {safeMetaTitle}
                   </div>
                 </div>
               )}
@@ -463,7 +498,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 <div>
                   <label className="text-sm font-semibold">Meta Description</label>
                   <div className="mt-1 p-3 rounded-lg bg-muted/50 border font-mono text-sm">
-                    {result.meta_description}
+                    {safeMetaDescription}
                   </div>
                 </div>
               )}

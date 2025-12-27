@@ -153,11 +153,34 @@ export default function Page(){
     )
   }
 
-  const isPro = profile?.plan === 'pro'
-  const todayGens = profile?.usage?.today?.generations ?? 0
-  const monthGens = profile?.usage?.month?.generations ?? 0
+  const normalizedPlan = profile?.plan?.toString?.().toLowerCase?.() || 'free'
+  const isPro = normalizedPlan.includes('pro')
+
+  // Derive usage from articles in case the profile payload hasn't been updated yet.
+  const now = new Date()
+  const startOfDay = new Date(now)
+  startOfDay.setHours(0, 0, 0, 0)
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - now.getDay())
+  startOfWeek.setHours(0, 0, 0, 0)
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const articlesToday = articles.filter((article) => new Date(article.created_at) >= startOfDay).length
+  const articlesThisWeek = articles.filter((article) => new Date(article.created_at) >= startOfWeek).length
+  const articlesThisMonth = articles.filter((article) => new Date(article.created_at) >= startOfMonth).length
+
+  const serverToday = profile?.usage?.today?.generations ?? 0
+  const serverWeek = profile?.usage?.week?.generations ?? profile?.usage?.weekly?.generations ?? 0
+  const serverMonth = profile?.usage?.month?.generations ?? 0
+
+  const todayGens = Math.max(serverToday, articlesToday)
+  const weekGens = Math.max(serverWeek, articlesThisWeek)
+  const monthGens = Math.max(serverMonth, articlesThisMonth)
+
   const toolsToday = profile?.tool_usage_today ?? profile?.tools_today ?? 0
   const toolLimit = isPro ? 5 : 1
+  const dailyArticleLimit = profile?.limits?.daily_articles ?? (isPro ? 10 : 1)
+  const weeklyArticleLimit = profile?.limits?.weekly_articles ?? (isPro ? 70 : 1)
 
   // Get recent articles (last 5)
   const recentArticles = [...articles]
@@ -239,7 +262,9 @@ export default function Page(){
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {isPro ? 'Unlimited access' : 'Limited features'}
+              {isPro
+                ? `${dailyArticleLimit} articles/day • ${toolLimit} tools/day`
+                : 'Limited features'}
             </p>
           </CardContent>
         </Card>
@@ -257,6 +282,10 @@ export default function Page(){
               <TrendingUp className="h-3 w-3" />
               <span>Total articles</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              This week: {weekGens}/{weeklyArticleLimit} {weekGens === 1 ? "article" : "articles"} —{' '}
+              {Math.max(weeklyArticleLimit - weekGens, 0)} left
+            </p>
           </CardContent>
         </Card>
 
@@ -270,20 +299,16 @@ export default function Page(){
           <CardContent>
             <div className="text-2xl font-bold">
               {todayGens}
-              {isPro ? (
-                <span className="text-sm text-muted-foreground ml-2">/ 10 daily</span>
-              ) : (
-                <span className="text-sm text-muted-foreground ml-2">/ 1 weekly</span>
-              )}
+              <span className="text-sm text-muted-foreground ml-2">/ {dailyArticleLimit} daily</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mt-2">
               <div
                 className="bg-gradient-to-r from-purple-600 to-blue-600 h-1.5 rounded-full transition-all"
-                style={{ width: `${isPro ? Math.min((todayGens / 10) * 100, 100) : Math.min((todayGens / 1) * 100, 100)}%` }}
+                style={{ width: `${Math.min((todayGens / dailyArticleLimit) * 100, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {isPro ? `${Math.max(10 - todayGens, 0)} articles left today` : `Resets weekly`}
+              {`${Math.max(dailyArticleLimit - todayGens, 0)} articles left today`}
             </p>
           </CardContent>
         </Card>
@@ -299,6 +324,9 @@ export default function Page(){
             <div className="text-2xl font-bold">{monthGens}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Generations this month
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isPro ? 'Pro plan — generous limits' : `${Math.max(weeklyArticleLimit * 4 - monthGens, 0)} estimated left this month`}
             </p>
           </CardContent>
         </Card>
