@@ -85,13 +85,102 @@ export default function ArticleViewPage() {
     try {
       setLoading(true)
       const data = await getArticle(id)
-      setArticle(data)
+      setArticle(normalizeArticle(data))
     } catch (e: any) {
       console.error("Failed to load article:", e)
       alert(e?.message || "Failed to load article")
       router.push("/library")
     } finally {
       setLoading(false)
+    }
+  }
+
+  function normalizeArticle(raw: any) {
+    if (!raw) return raw
+
+    const normalizeArray = (value: any) =>
+      Array.isArray(value) ? value.map((v: any) => coerceText(v)).filter(Boolean) : []
+
+    const normalizeLinks = (links: any) =>
+      Array.isArray(links)
+        ? links
+            .map((link: any) => ({
+              url: coerceText(link?.url || ""),
+              anchor_text: coerceText(link?.anchor_text || link?.anchorText || link?.title || link?.url || ""),
+            }))
+            .filter(link => link.url.length > 0)
+        : []
+
+    const normalizeCitations = (citations: any) =>
+      Array.isArray(citations)
+        ? citations
+            .map((citation: any) => ({
+              url: coerceText(citation?.url || ""),
+              title: coerceText(citation?.title || citation?.url || ""),
+              description: coerceText(citation?.description || ""),
+            }))
+            .filter(c => c.url.length > 0 || c.title.length > 0)
+        : []
+
+    const normalizeFaqs = (faqs: any) =>
+      Array.isArray(faqs)
+        ? faqs
+            .map((faq: any) => ({
+              question: coerceText(faq?.question || ""),
+              answer: coerceText(faq?.answer || ""),
+            }))
+            .filter(f => f.question || f.answer)
+        : []
+
+    const normalizeSocial = (posts: any) => {
+      if (Array.isArray(posts)) return posts
+      if (posts && typeof posts === "object")
+        return Object.entries(posts).map(([platform, content]: any) => ({ platform, content }))
+      return []
+    }
+
+    const seoCandidate =
+      raw?.seo_score ??
+      raw?.seoScore ??
+      raw?.score ??
+      (typeof raw?.seo === "object" ? raw?.seo?.overall ?? raw?.seo?.score ?? raw?.seo?.grade : undefined)
+
+    const readabilityCandidate = raw?.readability_score ?? raw?.readabilityScore
+    const readabilityNumber = Number(readabilityCandidate)
+
+    return {
+      ...raw,
+      title: coerceText(raw?.title || raw?.topic || "Untitled Article"),
+      topic: coerceText(raw?.topic || raw?.title),
+      markdown: coerceText(raw?.markdown || raw?.content || raw?.html || ""),
+      html: coerceText(raw?.html || raw?.markdown || raw?.content || ""),
+      content: coerceText(raw?.content || raw?.markdown || raw?.html || ""),
+      meta_title: coerceText(raw?.meta_title || raw?.metaTitle || raw?.title),
+      meta_description: coerceText(raw?.meta_description || raw?.metaDescription),
+      keywords: normalizeArray(raw?.keywords),
+      meta_keywords: normalizeArray(raw?.meta_keywords || raw?.metaKeywords),
+      internal_links: normalizeLinks(raw?.internal_links),
+      citations: normalizeCitations(raw?.citations),
+      faqs: normalizeFaqs(raw?.faqs),
+      social_posts: normalizeSocial(raw?.social_posts),
+      seo_score: typeof seoCandidate === "object"
+        ? Number(
+            seoCandidate?.overall ??
+            seoCandidate?.score ??
+            seoCandidate?.grade ??
+            seoCandidate?.word_count ??
+            0
+          ) || 0
+        : Number(seoCandidate) || 0,
+      readability_score: Number.isFinite(readabilityNumber)
+        ? readabilityNumber
+        : typeof readabilityCandidate === "string"
+          ? readabilityCandidate
+          : null,
+      word_count:
+        Number(raw?.word_count || raw?.wordCount || (raw?.seo && raw?.seo?.word_count)) ||
+        countWords(coerceText(raw?.markdown || raw?.content || raw?.html || "")),
+      image_url: coerceText(raw?.image_url || raw?.image?.image_url || raw?.image?.image_b64 || ""),
     }
   }
 
