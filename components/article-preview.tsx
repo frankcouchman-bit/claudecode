@@ -53,19 +53,44 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     return String(value)
   }
 
-  const htmlContent =
-    typeof result?.html === "string"
-      ? result.html
-      : typeof result?.markdown === "string"
-        ? result.markdown
-        : coerceText(result?.html || result?.markdown)
+  const resolveContent = () => {
+    const candidates = [
+      result?.html,
+      result?.markdown,
+      result?.content,
+      result?.body,
+      result?.article?.html,
+      result?.article?.markdown,
+      result?.article?.content,
+    ]
 
-  const markdownContent =
-    typeof result?.markdown === "string"
-      ? result.markdown
-      : typeof result?.html === "string"
-        ? result.html
-        : coerceText(result?.markdown || result?.html)
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        return candidate
+      }
+
+      if (candidate && typeof candidate === "object") {
+        const nested = (candidate as any)?.html || (candidate as any)?.markdown || (candidate as any)?.content
+        if (typeof nested === "string" && nested.trim().length > 0) {
+          return nested
+        }
+      }
+    }
+
+    return ""
+  }
+
+  const rawContent = resolveContent()
+  const normalizedContent = rawContent.trim().length > 0 ? rawContent : coerceText(rawContent)
+
+  const htmlContent = normalizedContent || ""
+  const markdownContent = typeof result?.markdown === "string" && result.markdown.trim().length > 0
+    ? result.markdown
+    : htmlContent
+
+  const displayHtml = /<\w+/i.test(htmlContent)
+    ? htmlContent
+    : htmlContent.replace(/\n/g, "<br />")
 
   const safeWordCount = Number(result?.word_count ?? result?.wordCount ?? 0) || 0
   const safeSeoScore = Number(result?.seo_score ?? result?.seoScore ?? 0) || 0
@@ -96,25 +121,33 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
     setSaving(true)
     try {
-        const response = await saveArticle({
-        title: result.title,
+      const payload = {
+        title: coerceText(result.title || result.topic || "Untitled Article"),
+        topic: coerceText(result.topic || result.title),
         content: htmlContent || markdownContent,
         markdown: markdownContent,
         html: htmlContent,
-        meta_title: result.meta_title,
-        meta_description: result.meta_description,
-                meta_keywords: Array.isArray(result.meta_keywords) ? result.meta_keywords : Array.isArray(result.keywords) ? result.keywords : [],
-        seo_score: result.seo_score,
-        readability_score: result.readability_score,
-        word_count: result.word_count,
+        meta_title: coerceText(result.meta_title || result.metaTitle || result.title),
+        meta_description: coerceText(result.meta_description || result.metaDescription),
+        meta_keywords: Array.isArray(result.meta_keywords)
+          ? result.meta_keywords.map(coerceText)
+          : Array.isArray(result.keywords)
+            ? result.keywords.map(coerceText)
+            : [],
+        seo_score: Number(result.seo_score ?? result.seoScore ?? 0) || 0,
+        readability_score: Number(result.readability_score ?? result.readabilityScore ?? 0) || undefined,
+        word_count: Number(result.word_count ?? result.wordCount ?? 0) ||
+          (markdownContent ? markdownContent.split(/\s+/).filter(Boolean).length : undefined),
         // Use nested image object if present
         image_url: result.image_url || (result.image && result.image.image_url) || (result.image && result.image.image_b64),
         citations: Array.isArray(result.citations) ? result.citations : [],
         faqs: Array.isArray(result.faqs) ? result.faqs : [],
-        social_posts: result.social_posts || {},
-        keywords: Array.isArray(result.keywords) ? result.keywords : [],
-        internal_links: Array.isArray(result.internal_links) ? result.internal_links : []
-      })
+        social_posts: typeof result.social_posts === "object" && result.social_posts !== null ? result.social_posts : {},
+        keywords: Array.isArray(result.keywords) ? result.keywords.map(coerceText) : [],
+        internal_links: Array.isArray(result.internal_links) ? result.internal_links : [],
+      }
+
+      const response = await saveArticle(payload)
 
       setSaved(true)
       setTimeout(() => {
@@ -267,15 +300,19 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
           <Card>
             <CardContent className="p-8">
-              <div
-                className="prose prose-lg dark:prose-invert max-w-none
-                           prose-headings:font-bold prose-headings:gradient-text
-                           prose-p:text-muted-foreground prose-p:leading-relaxed
-                           prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                           prose-img:rounded-lg prose-img:shadow-md
-                           prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
-                dangerouslySetInnerHTML={{ __html: htmlContent }}
-              />
+              {displayHtml.trim().length > 0 ? (
+                <div
+                  className="prose prose-lg dark:prose-invert max-w-none
+                             prose-headings:font-bold prose-headings:gradient-text
+                             prose-p:text-muted-foreground prose-p:leading-relaxed
+                             prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                             prose-img:rounded-lg prose-img:shadow-md
+                             prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
+                  dangerouslySetInnerHTML={{ __html: displayHtml }}
+                />
+              ) : (
+                <p className="text-muted-foreground text-sm">No article body was returned. Please regenerate.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -86,10 +86,10 @@ async function handle(res: Response) {
 export async function generateDraft(payload: any) {
   const url = `${API_BASE}/api/draft`
 
-  // Default to Anthropic Sonnet 3.7 with Serper-backed research unless callers override.
+  // Default to Anthropic Sonnet 3.7 via OpenRouter with Serper-backed research unless callers override.
   const body = {
-    provider: payload?.provider || "anthropic",
-    model: payload?.model || "claude-3-7-sonnet-20250219",
+    provider: payload?.provider || "openrouter",
+    model: payload?.model || "anthropic/claude-3.7-sonnet-20250219",
     search_provider: payload?.search_provider || "serper",
     ...payload,
   }

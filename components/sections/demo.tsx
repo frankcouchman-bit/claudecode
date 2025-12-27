@@ -61,8 +61,32 @@ export default function Demo() {
 
     const article = (raw as any)?.article || raw
     const title = article?.title || article?.topic || topic.trim()
-    const markdown = coerceText(article?.markdown || article?.content || "")
-    const html = coerceText(article?.html || markdown)
+
+    const resolveContent = () => {
+      const candidates = [
+        article?.html,
+        article?.markdown,
+        article?.content,
+        article?.body,
+        (article as any)?.content?.html,
+        (article as any)?.content?.markdown,
+        (article as any)?.content?.text,
+      ]
+
+      for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim().length > 0) return candidate
+        if (candidate && typeof candidate === "object") {
+          const nested = (candidate as any)?.html || (candidate as any)?.markdown || (candidate as any)?.content
+          if (typeof nested === "string" && nested.trim().length > 0) return nested
+        }
+      }
+
+      return ""
+    }
+
+    const rawContent = resolveContent()
+    const markdown = coerceText(rawContent)
+    const html = markdown
 
     const seoScoreCandidate =
       article?.seo_score ?? article?.seoScore ?? article?.score ?? article?.grade ?? article?.overall
@@ -120,6 +144,11 @@ export default function Demo() {
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const generationGate = useMemo(
+    () => canGenerateArticle(quota, isAuthenticated),
+    [quota, isAuthenticated]
+  )
+
   // Ensure selected word count remains valid when plan or options change
   useEffect(() => {
     if (!wordOptions.includes(wordCount)) {
@@ -134,10 +163,8 @@ export default function Demo() {
     }
 
     // Check quota enforcement
-    const { allowed, reason } = canGenerateArticle(quota, isAuthenticated)
-
-    if (!allowed) {
-      setError(reason || "Generation limit reached")
+    if (!generationGate.allowed) {
+      setError(generationGate.reason || "Generation limit reached")
       return
     }
 
@@ -161,8 +188,8 @@ export default function Demo() {
         generate_social: true,
         generate_image: true,
         generate_faqs: true,
-        provider: "anthropic",
-        model: "claude-3-7-sonnet-20250219",
+        provider: "openrouter",
+        model: "anthropic/claude-3.7-sonnet-20250219",
         search_provider: "serper",
         // Include optional brief/instructions if provided
         brief: brief.trim() || undefined
@@ -302,7 +329,7 @@ export default function Demo() {
 
               <Button
                 onClick={run}
-                disabled={loading}
+                disabled={loading || !generationGate.allowed}
                 className="gradient-btn text-white h-12"
               >
                 {loading ? (
@@ -318,6 +345,12 @@ export default function Demo() {
                 )}
               </Button>
             </div>
+
+            {!generationGate.allowed && (
+              <p className="text-sm text-red-500 mt-2">
+                {generationGate.reason || "Generation limit reached. Upgrade to continue."}
+              </p>
+            )}
 
             {/* Optional brief/instructions */}
             <div className="flex flex-col">
