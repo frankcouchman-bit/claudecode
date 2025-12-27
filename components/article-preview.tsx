@@ -96,6 +96,63 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const safeSeoScore = Number(result?.seo_score ?? result?.seoScore ?? 0) || 0
   const safeMetaTitle = coerceText(result?.meta_title || result?.metaTitle || result?.title)
   const safeMetaDescription = coerceText(result?.meta_description || result?.metaDescription)
+  const safeReadability = (() => {
+    const candidate = result?.readability_score ?? result?.readabilityScore
+    const num = Number(candidate)
+    if (Number.isFinite(num) && num > 0) return num
+    if (typeof candidate === "string" && candidate.trim().length > 0) return candidate
+    return null
+  })()
+
+  const safeTitle = coerceText(result?.title || result?.topic || "Your Article")
+
+  const keywords = Array.isArray(result?.keywords)
+    ? result.keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
+    : []
+
+  const metaKeywords = Array.isArray(result?.meta_keywords)
+    ? result.meta_keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
+    : []
+
+  const internalLinks = Array.isArray(result?.internal_links)
+    ? result.internal_links
+        .map((link: any) => ({
+          url: coerceText(link?.url || ""),
+          anchor_text: coerceText(link?.anchor_text || link?.anchorText || link?.title || link?.url || ""),
+        }))
+        .filter(link => link.url.length > 0)
+    : []
+
+  const citations = Array.isArray(result?.citations)
+    ? result.citations.map((citation: any) => ({
+        url: coerceText(citation?.url || ""),
+        title: coerceText(citation?.title || citation?.url || ""),
+        description: coerceText(citation?.description || ""),
+      }))
+    : []
+
+  const faqs = Array.isArray(result?.faqs)
+    ? result.faqs.map((faq: any) => ({
+        question: coerceText(faq?.question || ""),
+        answer: coerceText(faq?.answer || ""),
+      })).filter(f => f.question || f.answer)
+    : []
+
+  const socialPosts = (() => {
+    const sp = result?.social_posts
+    if (Array.isArray(sp)) return sp
+    if (sp && typeof sp === "object") return Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
+    return []
+  })().map((post: any) => ({
+    platform: coerceText(post.platform || "General"),
+    content: coerceText(post.content || ""),
+  }))
+
+  const safeImageUrl = (() => {
+    const urlCandidate = result?.image_url || result?.image?.image_url || result?.image?.image_b64 || ""
+    const coerced = coerceText(urlCandidate)
+    return coerced.trim().length > 0 ? coerced : ""
+  })()
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
@@ -129,22 +186,18 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
         html: htmlContent,
         meta_title: coerceText(result.meta_title || result.metaTitle || result.title),
         meta_description: coerceText(result.meta_description || result.metaDescription),
-        meta_keywords: Array.isArray(result.meta_keywords)
-          ? result.meta_keywords.map(coerceText)
-          : Array.isArray(result.keywords)
-            ? result.keywords.map(coerceText)
-            : [],
+        meta_keywords: metaKeywords,
         seo_score: Number(result.seo_score ?? result.seoScore ?? 0) || 0,
         readability_score: Number(result.readability_score ?? result.readabilityScore ?? 0) || undefined,
         word_count: Number(result.word_count ?? result.wordCount ?? 0) ||
           (markdownContent ? markdownContent.split(/\s+/).filter(Boolean).length : undefined),
         // Use nested image object if present
-        image_url: result.image_url || (result.image && result.image.image_url) || (result.image && result.image.image_b64),
-        citations: Array.isArray(result.citations) ? result.citations : [],
-        faqs: Array.isArray(result.faqs) ? result.faqs : [],
-        social_posts: typeof result.social_posts === "object" && result.social_posts !== null ? result.social_posts : {},
-        keywords: Array.isArray(result.keywords) ? result.keywords.map(coerceText) : [],
-        internal_links: Array.isArray(result.internal_links) ? result.internal_links : [],
+        image_url: safeImageUrl,
+        citations,
+        faqs,
+        social_posts: socialPosts,
+        keywords,
+        internal_links: internalLinks,
       }
 
       const response = await saveArticle(payload)
@@ -186,15 +239,15 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                     SEO: {safeSeoScore}/100
                   </Badge>
                 )}
-                {result?.readability_score && (
+                {safeReadability && (
                   <Badge variant="outline">
                     <Eye className="w-3 h-3 mr-1" />
-                    Readability: {result.readability_score}
+                    Readability: {safeReadability}
                   </Badge>
                 )}
               </div>
-              <CardTitle className="text-3xl mb-2">{result?.title || "Your Article"}</CardTitle>
-              {result?.meta_description && (
+              <CardTitle className="text-3xl mb-2">{safeTitle}</CardTitle>
+              {safeMetaDescription && (
                 <p className="text-muted-foreground">{safeMetaDescription}</p>
               )}
             </div>
@@ -246,7 +299,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile(markdownContent || htmlContent || '', `${result?.title || 'article'}.md`, 'text/markdown')}
+                onClick={() => downloadFile(markdownContent || htmlContent || '', `${safeTitle || 'article'}.md`, 'text/markdown')}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Markdown
@@ -254,7 +307,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile(htmlContent || '', `${result?.title || 'article'}.html`, 'text/html')}
+                onClick={() => downloadFile(htmlContent || '', `${safeTitle || 'article'}.html`, 'text/html')}
               >
                 <Download className="mr-2 h-4 w-4" />
                 HTML
@@ -277,7 +330,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
 
         {/* Preview Tab */}
         <TabsContent value="preview" className="space-y-6">
-          {result?.image_url && (
+          {safeImageUrl && (
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -290,8 +343,8 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardHeader>
               <CardContent>
                 <img
-                  src={result.image_url}
-                  alt={result.title || 'Article hero image'}
+                  src={safeImageUrl}
+                  alt={safeTitle || 'Article hero image'}
                   className="w-full h-auto rounded-lg shadow-md"
                 />
               </CardContent>
@@ -328,9 +381,9 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {Array.isArray(result?.keywords) && result.keywords.length > 0 ? (
+                {keywords.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {result.keywords.map((keyword: string, i: number) => (
+                    {keywords.map((keyword: string, i: number) => (
                       <Badge key={i} variant="secondary">{keyword}</Badge>
                     ))}
                   </div>
@@ -348,9 +401,9 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {Array.isArray(result?.internal_links) && result.internal_links.length > 0 ? (
+                {internalLinks.length > 0 ? (
                   <ul className="space-y-2">
-                    {result.internal_links.slice(0, 5).map((link: any, i: number) => (
+                    {internalLinks.slice(0, 5).map((link: any, i: number) => (
                       <li key={i} className="text-sm">
                         <a href={link.url} className="text-primary hover:underline">
                           {link.anchor_text || link.url}
@@ -385,14 +438,14 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   />
                 </div>
               </div>
-              {result?.readability_score && (
+              {safeReadability && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Readability Score</span>
-                    <span className="font-semibold">{result.readability_score}</span>
+                    <span className="font-semibold">{safeReadability}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {result.readability_score >= 60 ? 'Easy to read' : 'Moderate difficulty'}
+                    {Number(safeReadability) >= 60 ? 'Easy to read' : 'Moderate difficulty'}
                   </p>
                 </div>
               )}
@@ -410,46 +463,35 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(() => {
-                // Convert social_posts to an array of objects.  The API may return
-                // either an array or a map keyed by platform.  We normalise
-                // everything to an array with `platform` and `content` fields.
-                let postsArray: { platform: string; content: string }[] = []
-                const sp = result?.social_posts
-                if (Array.isArray(sp)) {
-                  postsArray = sp as any
-                } else if (sp && typeof sp === 'object') {
-                  postsArray = Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
-                }
-                if (postsArray.length > 0) {
-                  return postsArray.map((post: any, i: number) => {
-                    const content = coerceText(post.content)
-                    return (
-                      <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline" className="capitalize">
-                            <Globe className="w-3 h-3 mr-1" />
-                            {post.platform || 'General'}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(content, `social-${i}`)}
-                          >
-                            {copied === `social-${i}` ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                        <p className="text-sm">{content}</p>
+              {socialPosts.length > 0 ? (
+                socialPosts.map((post: any, i: number) => {
+                  const content = coerceText(post.content)
+                  return (
+                    <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="capitalize">
+                          <Globe className="w-3 h-3 mr-1" />
+                          {post.platform || 'General'}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(content, `social-${i}`)}
+                        >
+                          {copied === `social-${i}` ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                    )
-                  })
-                }
-                return <p className="text-sm text-muted-foreground">No social posts generated</p>
-              })()}
+                      <p className="text-sm">{content}</p>
+                    </div>
+                  )
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">No social posts generated</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -464,9 +506,9 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {Array.isArray(result?.citations) && result.citations.length > 0 ? (
+              {citations.length > 0 ? (
                 <ol className="space-y-3 list-decimal list-inside">
-                  {result.citations.map((citation: any, i: number) => (
+                  {citations.map((citation: any, i: number) => (
                     <li key={i} className="text-sm">
                       <a
                         href={citation.url}
@@ -499,8 +541,8 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Array.isArray(result?.faqs) && result.faqs.length > 0 ? (
-                result.faqs.map((faq: any, i: number) => (
+              {faqs.length > 0 ? (
+                faqs.map((faq: any, i: number) => (
                   <div key={i} className="p-4 rounded-lg bg-muted/50 border">
                     <h4 className="font-semibold mb-2">{faq.question}</h4>
                     <p className="text-sm text-muted-foreground">{faq.answer}</p>
@@ -523,7 +565,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {result?.meta_title && (
+              {safeMetaTitle && (
                 <div>
                   <label className="text-sm font-semibold">Title Tag</label>
                   <div className="mt-1 p-3 rounded-lg bg-muted/50 border font-mono text-sm">
@@ -531,7 +573,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   </div>
                 </div>
               )}
-              {result?.meta_description && (
+              {safeMetaDescription && (
                 <div>
                   <label className="text-sm font-semibold">Meta Description</label>
                   <div className="mt-1 p-3 rounded-lg bg-muted/50 border font-mono text-sm">
@@ -539,12 +581,12 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   </div>
                 </div>
               )}
-              {Array.isArray(result?.meta_keywords) && result.meta_keywords.length > 0 && (
+              {metaKeywords.length > 0 && (
                 <div>
                   <label className="text-sm font-semibold">Meta Keywords</label>
                   <div className="mt-1 p-3 rounded-lg bg-muted/50 border">
                     <div className="flex flex-wrap gap-2">
-                      {result.meta_keywords.map((keyword: string, i: number) => (
+                      {metaKeywords.map((keyword: string, i: number) => (
                         <Badge key={i} variant="secondary">{keyword}</Badge>
                       ))}
                     </div>
