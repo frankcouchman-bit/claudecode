@@ -30,9 +30,35 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import { GenerationErrorBoundary } from "@/components/generation-error-boundary"
 
 export default function Demo() {
   const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
+
+  const normalizeResult = (raw: any) => {
+    if (!raw) return null
+    // Attempt to parse string payloads from the API
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw)
+      } catch {
+        return { title: topic.trim(), markdown: raw, html: raw }
+      }
+    }
+
+    const article = (raw as any)?.article || raw
+    const title = article?.title || article?.topic || topic.trim()
+    const markdown = article?.markdown || article?.content || ""
+    const html = article?.html || markdown
+
+    return {
+      ...article,
+      title,
+      markdown,
+      html,
+      word_count: article?.word_count || markdown.split(/\s+/).filter(Boolean).length,
+    }
+  }
 
   // Determine allowed word counts based on plan. Memoize to keep Select stable
   const wordOptions = useMemo(() => {
@@ -74,6 +100,7 @@ export default function Demo() {
     }
 
     setError(null)
+    setResult(null)
     setLoading(true)
     try {
       console.log('Generating article with payload:', {
@@ -97,6 +124,11 @@ export default function Demo() {
       })
 
       console.log('Generation successful:', r)
+      const safeResult = normalizeResult(r)
+
+      if (!safeResult) {
+        throw new Error("Empty response from generator")
+      }
 
       // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
@@ -107,7 +139,7 @@ export default function Demo() {
         setTimeout(() => syncWithBackend(), 1000)
       }
 
-      setResult(r)
+      setResult(safeResult)
     } catch (e: any) {
       console.error('Generation failed:', e)
       const errorMessage = e?.message || "Failed to generate"
@@ -300,7 +332,11 @@ export default function Demo() {
       )}
 
       {/* Result Section */}
-      {result && !loading && <ArticlePreview result={result} />}
+      {result && !loading && (
+        <GenerationErrorBoundary onReset={() => setResult(null)}>
+          <ArticlePreview result={result} />
+        </GenerationErrorBoundary>
+      )}
     </div>
   )
 }
