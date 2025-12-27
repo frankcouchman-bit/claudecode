@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { generateDraft, saveArticle } from "@/lib/api"
+import { generateDraft, saveArticle, suggestInternalLinks } from "@/lib/api"
 import { ArticlePreview } from "@/components/article-preview"
 import { useQuota } from "@/contexts/quota-context"
 import {
@@ -30,34 +30,75 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import { GenerationErrorBoundary } from "@/components/generation-error-boundary"
 
 export default function Demo() {
   const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
 
-  // Determine allowed word counts based on plan
-  const wordOptions = (() => {
+  const coerceText = (value: any) => {
+    if (typeof value === "string") return value
+    if (value === null || value === undefined) return ""
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        return String(value)
+      }
+    }
+    return String(value)
+  }
+
+  const normalizeResult = (raw: any) => {
+    if (!raw) return null
+    // Attempt to parse string payloads from the API
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw)
+      } catch {
+        return { title: topic.trim(), markdown: raw, html: raw }
+      }
+    }
+
+    const article = (raw as any)?.article || raw
+    const title = article?.title || article?.topic || topic.trim()
+    const markdown = coerceText(article?.markdown || article?.content || "")
+    const html = coerceText(article?.html || markdown)
+
+    return {
+      ...article,
+      title,
+      markdown,
+      html,
+      word_count:
+        Number(article?.word_count || article?.wordCount) ||
+        (markdown ? markdown.split(/\s+/).filter(Boolean).length : 0),
+    }
+  }
+
+  // Determine allowed word counts based on plan. Memoize to keep Select stable
+  const wordOptions = useMemo(() => {
     if (!isAuthenticated) return ["1500"]
     if (quota.plan === 'free') return ["1500", "2000"]
-    // Pro plan
+    // Pro plan (quick + extended options)
     return ["1500", "2000", "2500", "3000"]
-  })()
+  }, [isAuthenticated, quota.plan])
+  const [topic, setTopic] = useState("")
+  const [language, setLanguage] = useState("en")
+  const [tone, setTone] = useState("professional")
+  // Word count selection; will be constrained by plan
+  const [wordCount, setWordCount] = useState(() => wordOptions[wordOptions.length - 1])
+  // Optional brief/instructions to guide generation
+  const [brief, setBrief] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // Ensure selected word count remains valid when plan or options change
   useEffect(() => {
     if (!wordOptions.includes(wordCount)) {
       setWordCount(wordOptions[wordOptions.length - 1])
     }
-  }, [quota.plan])
-  const [topic, setTopic] = useState("")
-  const [language, setLanguage] = useState("en")
-  const [tone, setTone] = useState("professional")
-  // Word count selection; will be constrained by plan
-  const [wordCount, setWordCount] = useState("3000")
-  // Optional brief/instructions to guide generation
-  const [brief, setBrief] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
+  }, [wordOptions, wordCount])
 
   async function run() {
     if (!topic.trim()) {
@@ -74,6 +115,7 @@ export default function Demo() {
     }
 
     setError(null)
+    setResult(null)
     setLoading(true)
     try {
       console.log('Generating article with payload:', {
@@ -92,11 +134,45 @@ export default function Demo() {
         generate_social: true,
         generate_image: true,
         generate_faqs: true,
+        provider: "anthropic",
+        model: "claude-3-7-sonnet-20250219",
+        search_provider: "serper",
         // Include optional brief/instructions if provided
         brief: brief.trim() || undefined
       })
 
       console.log('Generation successful:', r)
+      const safeResult = normalizeResult(r)
+
+      if (!safeResult) {
+        throw new Error("Empty response from generator")
+      }
+
+      // Backfill internal link suggestions when the generator response is missing them.
+      let enrichedResult = safeResult
+      const needsLinks =
+        (!Array.isArray(safeResult.internal_links) || safeResult.internal_links.length === 0) &&
+        Boolean(safeResult.markdown || safeResult.html)
+
+      if (needsLinks) {
+        try {
+          const linkResponse = await suggestInternalLinks({
+            topic: safeResult.title || topic.trim(),
+            text: (safeResult.markdown || safeResult.html || "").slice(0, 20000),
+          })
+
+          const incomingLinks =
+            (Array.isArray((linkResponse as any)?.links) && (linkResponse as any).links) ||
+            (Array.isArray((linkResponse as any)?.suggestions) && (linkResponse as any).suggestions) ||
+            []
+
+          if (incomingLinks.length > 0) {
+            enrichedResult = { ...safeResult, internal_links: incomingLinks }
+          }
+        } catch (linkError) {
+          console.error("Failed to fetch internal links", linkError)
+        }
+      }
 
       // Record successful generation and update global state
       const updatedQuota = recordArticleGeneration(quota, isAuthenticated)
@@ -107,7 +183,7 @@ export default function Demo() {
         setTimeout(() => syncWithBackend(), 1000)
       }
 
-      setResult(r)
+      setResult(enrichedResult)
     } catch (e: any) {
       console.error('Generation failed:', e)
       const errorMessage = e?.message || "Failed to generate"
@@ -300,7 +376,11 @@ export default function Demo() {
       )}
 
       {/* Result Section */}
-      {result && !loading && <ArticlePreview result={result} />}
+      {result && !loading && (
+        <GenerationErrorBoundary onReset={() => setResult(null)}>
+          <ArticlePreview result={result} />
+        </GenerationErrorBoundary>
+      )}
     </div>
   )
 }

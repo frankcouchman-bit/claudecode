@@ -1,6 +1,11 @@
 import { getAccessToken } from "@/lib/auth"
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://seoscribe.frank-couchman.workers.dev"
+// Support both NEXT_PUBLIC_API_URL (Next.js convention) and PUBLIC_API_URL (Cloudflare/Netlify env)
+// so deployments that only set PUBLIC_API_URL still call the correct worker endpoint.
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.PUBLIC_API_URL ||
+  "https://seoscribe.frank-couchman.workers.dev"
 
 type NormalizedArticle = {
   id: string
@@ -13,6 +18,19 @@ type NormalizedArticle = {
   created_at: string
   updated_at: string
 } & Record<string, any>
+
+function coerceText(value: any): string {
+  if (typeof value === "string") return value
+  if (value === null || value === undefined) return ""
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
 
 function mergeHeaders(input?: HeadersInit): Record<string, string> {
   if (!input) return {}
@@ -65,9 +83,21 @@ async function handle(res: Response) {
   return rawText
 }
 // Generate a draft article.  Calls the /api/draft endpoint instead of the legacy generate-draft route.
-export async function generateDraft(payload:any){
+export async function generateDraft(payload: any) {
   const url = `${API_BASE}/api/draft`
-  const res = await fetch(url, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
+
+  // Default to Anthropic Sonnet 3.7 with Serper-backed research unless callers override.
+  const body = {
+    provider: payload?.provider || "anthropic",
+    model: payload?.model || "claude-3-7-sonnet-20250219",
+    search_provider: payload?.search_provider || "serper",
+    ...payload,
+  }
+
+  const res = await fetch(
+    url,
+    withAuthHeaders({ method: "POST", body: JSON.stringify(body), cache: "no-store" })
+  )
   return handle(res)
 }
 function normalizeArticlePayload(payload: any): NormalizedArticle | null {
@@ -78,6 +108,17 @@ function normalizeArticlePayload(payload: any): NormalizedArticle | null {
     payload
 
   const article = articleCandidate as Record<string, any>
+  const markdown = coerceText(article.markdown || article.content || article.html)
+  const html = coerceText(article.html || markdown)
+  const content = coerceText(article.content || markdown || html)
+  const metaTitle = coerceText(article.meta_title || article.metaTitle)
+  const metaDescription = coerceText(article.meta_description || article.metaDescription)
+  const keywords = Array.isArray(article.keywords)
+    ? article.keywords.map((kw: any) => coerceText(kw)).filter(Boolean)
+    : []
+  const wordCount =
+    Number(article.word_count ?? article.wordCount ?? 0) ||
+    (markdown || content || html ? (markdown || content || html).split(/\s+/).filter(Boolean).length : 0)
   const createdAt =
     article.created_at ||
     article.createdAt ||
@@ -92,9 +133,13 @@ function normalizeArticlePayload(payload: any): NormalizedArticle | null {
     id: article.id || article._id || article.uuid || "",
     title: article.title || article.headline || article.topic || "",
     topic: article.topic || article.title || "",
-    content: article.content || article.markdown || article.html || "",
-    markdown: article.markdown || "",
-    html: article.html || "",
+    content,
+    markdown,
+    html,
+    meta_title: metaTitle,
+    meta_description: metaDescription,
+    keywords,
+    word_count: wordCount,
     seo_score: Number(article.seo_score ?? article.seoScore ?? article.score ?? 0) || 0,
     created_at: createdAt,
     updated_at: updatedAt,
