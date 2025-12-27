@@ -40,6 +40,33 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const coerceText = (value: any) => {
+    if (typeof value === "string") return value
+    if (value === null || value === undefined) return ""
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        return String(value)
+      }
+    }
+    return String(value)
+  }
+
+  const htmlContent =
+    typeof result?.html === "string"
+      ? result.html
+      : typeof result?.markdown === "string"
+        ? result.markdown
+        : coerceText(result?.html || result?.markdown)
+
+  const markdownContent =
+    typeof result?.markdown === "string"
+      ? result.markdown
+      : typeof result?.html === "string"
+        ? result.html
+        : coerceText(result?.markdown || result?.html)
+
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
     setCopied(label)
@@ -66,9 +93,9 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     try {
         const response = await saveArticle({
         title: result.title,
-        content: result.html || result.markdown,
-        markdown: result.markdown,
-        html: result.html,
+        content: htmlContent || markdownContent,
+        markdown: markdownContent,
+        html: htmlContent,
         meta_title: result.meta_title,
         meta_description: result.meta_description,
                 meta_keywords: Array.isArray(result.meta_keywords) ? result.meta_keywords : Array.isArray(result.keywords) ? result.keywords : [],
@@ -130,7 +157,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               </div>
               <CardTitle className="text-3xl mb-2">{result?.title || "Your Article"}</CardTitle>
               {result?.meta_description && (
-                <p className="text-muted-foreground">{result.meta_description}</p>
+                <p className="text-muted-foreground">{coerceText(result.meta_description)}</p>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -164,7 +191,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(result?.html || result?.markdown || '', 'article')}
+                onClick={() => copyToClipboard(htmlContent || markdownContent || '', 'article')}
               >
                 {copied === 'article' ? (
                   <>
@@ -181,7 +208,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile(result?.markdown || result?.html || '', `${result?.title || 'article'}.md`, 'text/markdown')}
+                onClick={() => downloadFile(markdownContent || htmlContent || '', `${result?.title || 'article'}.md`, 'text/markdown')}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Markdown
@@ -189,7 +216,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile(result?.html || '', `${result?.title || 'article'}.html`, 'text/html')}
+                onClick={() => downloadFile(htmlContent || '', `${result?.title || 'article'}.html`, 'text/html')}
               >
                 <Download className="mr-2 h-4 w-4" />
                 HTML
@@ -242,7 +269,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                            prose-img:rounded-lg prose-img:shadow-md
                            prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
-                dangerouslySetInnerHTML={{ __html: result?.html || "" }}
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
               />
             </CardContent>
           </Card>
@@ -353,28 +380,31 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
                   postsArray = Object.entries(sp).map(([platform, content]: any) => ({ platform, content }))
                 }
                 if (postsArray.length > 0) {
-                  return postsArray.map((post: any, i: number) => (
-                    <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="capitalize">
-                          <Globe className="w-3 h-3 mr-1" />
-                          {post.platform || 'General'}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(post.content, `social-${i}`)}
-                        >
-                          {copied === `social-${i}` ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
+                  return postsArray.map((post: any, i: number) => {
+                    const content = coerceText(post.content)
+                    return (
+                      <div key={i} className="p-4 rounded-lg bg-muted/50 border space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="capitalize">
+                            <Globe className="w-3 h-3 mr-1" />
+                            {post.platform || 'General'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(content, `social-${i}`)}
+                          >
+                            {copied === `social-${i}` ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-sm">{content}</p>
                       </div>
-                      <p className="text-sm">{post.content}</p>
-                    </div>
-                  ))
+                    )
+                  })
                 }
                 return <p className="text-sm text-muted-foreground">No social posts generated</p>
               })()}
