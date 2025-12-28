@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "NEXT_USE_TURBOPACK=0 NEXT_DISABLE_TURBOPACK=1 __NEXT_DISABLE_TURBOPACK=1 TURBOPACK=0 next build",
     "start": "next start -p 3000",
     "lint": "next lint || true"
   },
