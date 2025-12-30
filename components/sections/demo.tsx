@@ -123,28 +123,86 @@ export default function Demo() {
         ? article.metaKeywords.map((kw: any) => coerceText(kw)).filter(Boolean)
         : []
 
+    const safeCitations = Array.isArray(article?.citations)
+      ? article.citations.map((c: any) => ({
+          url: coerceText(c?.url || ""),
+          title: coerceText(c?.title || c?.url || ""),
+          description: coerceText(c?.description || ""),
+        }))
+      : []
+
+    const safeFaqs = Array.isArray(article?.faqs)
+      ? article.faqs
+          .map((faq: any) => ({
+            question: coerceText(faq?.question || ""),
+            answer: coerceText(faq?.answer || ""),
+          }))
+          .filter(f => f.question || f.answer)
+      : []
+
+    const safeSocial = (() => {
+      const sp = (article as any)?.social_posts ?? (article as any)?.socialPosts
+      if (Array.isArray(sp)) return sp.map((post: any) => ({ platform: coerceText(post?.platform || ""), content: coerceText(post?.content || "") }))
+      if (sp && typeof sp === "object") return Object.entries(sp).map(([platform, content]: any) => ({ platform: coerceText(platform), content: coerceText(content) }))
+      return []
+    })()
+
+    const safeLinks = Array.isArray(article?.internal_links)
+      ? article.internal_links
+          .map((link: any) => ({
+            url: coerceText(link?.url || ""),
+            anchor_text: coerceText(link?.anchor_text || link?.anchorText || link?.title || link?.url || ""),
+          }))
+          .filter(l => l.url.length > 0)
+      : []
+
+    const safeHeadings = Array.isArray(article?.headings)
+      ? article.headings.map((h: any) => coerceText(h)).filter(Boolean)
+      : []
+
+    const safeSeoScore =
+      typeof seoScoreCandidate === "object"
+        ? Number(
+            seoScoreCandidate?.overall ??
+              seoScoreCandidate?.score ??
+              seoScoreCandidate?.grade ??
+              seoScoreCandidate?.word_count ??
+              0
+          ) || 0
+        : Number(seoScoreCandidate) || 0
+
+    const safeReadability = (() => {
+      const candidate = article?.readability_score ?? article?.readabilityScore
+      const num = Number(candidate)
+      if (Number.isFinite(num) && num > 0) return num
+      if (typeof candidate === "string" && candidate.trim().length > 0) return candidate
+      return null
+    })()
+
+    const safeImage = coerceText(
+      (article as any)?.image_url || (article as any)?.image || (article as any)?.hero_image || (article as any)?.heroImage || ""
+    )
+
     return {
-      ...article,
       title,
+      topic: coerceText(article?.topic || title),
       markdown,
       html,
       meta_title: coerceText(article?.meta_title || article?.metaTitle),
       meta_description: coerceText(article?.meta_description || article?.metaDescription),
       keywords: safeKeywords,
       meta_keywords: safeMetaKeywords,
-      seo_score:
-        typeof seoScoreCandidate === "object"
-          ? Number(
-              seoScoreCandidate?.overall ??
-                seoScoreCandidate?.score ??
-                seoScoreCandidate?.grade ??
-                seoScoreCandidate?.word_count ??
-                0
-            ) || 0
-          : Number(seoScoreCandidate) || 0,
+      citations: safeCitations,
+      faqs: safeFaqs,
+      social_posts: safeSocial,
+      internal_links: safeLinks,
+      headings: safeHeadings,
+      seo_score: safeSeoScore,
       word_count:
         Number(article?.word_count || article?.wordCount || seoMeta?.word_count) ||
         (markdown ? markdown.split(/\s+/).filter(Boolean).length : 0),
+      readability_score: safeReadability,
+      image_url: safeImage,
     }
   }
 
