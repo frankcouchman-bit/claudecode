@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { saveArticle } from "@/lib/api"
-import DOMPurify from "isomorphic-dompurify"
 import { renderMarkdownToHtml } from "@/lib/render-markdown"
 import { useQuota } from "@/contexts/quota-context"
 import { motion } from "framer-motion"
+import { sanitizeHtml } from "@/lib/sanitize"
 import {
   Copy,
   Download,
@@ -111,7 +111,7 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
     ? normalizedContent
     : renderMarkdownToHtml(normalizedContent)
 
-  const htmlContent = DOMPurify.sanitize(renderedHtml || "")
+  const htmlContent = sanitizeHtml(renderedHtml || "")
   const displayHtml = htmlContent
 
   const computedWordCount = markdownContent

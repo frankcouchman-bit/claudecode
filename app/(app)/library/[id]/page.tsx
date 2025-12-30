@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import DOMPurify from "isomorphic-dompurify"
 import { renderMarkdownToHtml } from "@/lib/render-markdown"
+import { sanitizeHtml } from "@/lib/sanitize"
 import {
   ArrowLeft,
   Edit,
@@ -70,7 +70,7 @@ export default function ArticleViewPage() {
 
   const combinedSource = rawHtml || rawMarkdown || contentFallback
   const htmlContent = /<\w+/i.test(combinedSource)
-    ? DOMPurify.sanitize(combinedSource)
+    ? sanitizeHtml(combinedSource)
     : renderMarkdownToHtml(combinedSource)
 
   const markdownContent = rawMarkdown || contentFallback

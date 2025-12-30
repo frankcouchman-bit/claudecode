@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeHtml } from "@/lib/sanitize"
 
 /**
  * Lightweight Markdown renderer for client-side previews.
@@ -40,5 +40,5 @@ export function renderMarkdownToHtml(markdown: string): string {
   // Preserve single line breaks within paragraphs
   html = html.replace(/([^>])\n([^<])/g, "$1<br />$2")
 
-  return DOMPurify.sanitize(html)
+  return sanitizeHtml(html)
 }
