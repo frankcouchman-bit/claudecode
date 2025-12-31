@@ -246,7 +246,7 @@ export async function optimizeMetaTags(payload: { title: string }) {
   }
 }
 // Suggest internal links by leveraging the keywords API to get keyword clusters.  The caller can derive internal links from this data.
-export async function suggestInternalLinks(payload: { topic: string, text?: string }){
+export async function suggestInternalLinks(payload: { topic: string, text?: string, domain?: string, site_url?: string }){
   // call the keyword clustering tool to get suggestions
   const res = await fetch(`${API_BASE}/api/tools/keywords`, withAuthHeaders({ method:"POST", body: JSON.stringify(payload), cache:"no-store" }))
   return handle(res)

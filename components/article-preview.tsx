@@ -62,11 +62,26 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
         ? (result as any).article.sections
         : null
 
+    const normalizeSectionBody = (body: any) => {
+      if (Array.isArray(body)) {
+        return body.map(item => coerceText(item)).filter(Boolean).join("\n\n")
+      }
+      if (body && typeof body === "object") {
+        const candidate =
+          (body as any).content ||
+          (body as any).text ||
+          (body as any).body ||
+          Object.values(body as any).join("\n\n")
+        return coerceText(candidate)
+      }
+      return coerceText(body)
+    }
+
     if (sectionBlocks && sectionBlocks.length > 0) {
       return sectionBlocks
         .map((section: any) => {
           const heading = coerceText(section?.heading || section?.title || "")
-          const body = coerceText(section?.content || section?.body || section?.text || "")
+          const body = normalizeSectionBody(section?.content ?? section?.body ?? section?.text ?? "")
           return `${heading ? `## ${heading}\n\n` : ""}${body}`
         })
         .join("\n\n")
@@ -174,7 +189,13 @@ export function ArticlePreview({ result, onSave }: ArticlePreviewProps) {
   }))
 
   const safeImageUrl = (() => {
-    const urlCandidate = result?.image_url || result?.image?.image_url || result?.image?.image_b64 || ""
+    const urlCandidate =
+      result?.image_url ||
+      result?.image?.image_url ||
+      result?.image?.image_b64 ||
+      result?.image?.url ||
+      result?.image?.src ||
+      ""
     const coerced = coerceText(urlCandidate)
     return coerced.trim().length > 0 ? coerced : ""
   })()

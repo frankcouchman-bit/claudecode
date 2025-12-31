@@ -35,6 +35,17 @@ import { GenerationErrorBoundary } from "@/components/generation-error-boundary"
 export default function Demo() {
   const { quota, isAuthenticated, updateQuota, syncWithBackend } = useQuota()
 
+  const normalizeSiteUrl = (value: string) => {
+    const trimmed = (value || "").trim()
+    if (!trimmed) return ""
+    try {
+      const url = trimmed.startsWith("http") ? new URL(trimmed) : new URL(`https://${trimmed}`)
+      return url.origin
+    } catch {
+      return ""
+    }
+  }
+
   const coerceText = (value: any) => {
     if (typeof value === "string") return value
     if (value === null || value === undefined) return ""
@@ -66,11 +77,26 @@ export default function Demo() {
     const resolveContent = () => {
       const sectionBlocks = Array.isArray((article as any)?.sections) ? (article as any).sections : null
 
+      const normalizeSectionBody = (body: any) => {
+        if (Array.isArray(body)) {
+          return body.map(item => coerceText(item)).filter(Boolean).join("\n\n")
+        }
+        if (body && typeof body === "object") {
+          const candidate =
+            (body as any).content ||
+            (body as any).text ||
+            (body as any).body ||
+            Object.values(body as any).join("\n\n")
+          return coerceText(candidate)
+        }
+        return coerceText(body)
+      }
+
       if (sectionBlocks && sectionBlocks.length > 0) {
         return sectionBlocks
           .map((section: any) => {
             const heading = coerceText(section?.heading || section?.title || "")
-            const body = coerceText(section?.content || section?.body || section?.text || "")
+            const body = normalizeSectionBody(section?.content ?? section?.body ?? section?.text ?? "")
             return `${heading ? `## ${heading}\n\n` : ""}${body}`
           })
           .join("\n\n")
@@ -180,7 +206,14 @@ export default function Demo() {
     })()
 
     const safeImage = coerceText(
-      (article as any)?.image_url || (article as any)?.image || (article as any)?.hero_image || (article as any)?.heroImage || ""
+      (article as any)?.image_url ||
+      (article as any)?.image?.image_url ||
+      (article as any)?.image?.url ||
+      (article as any)?.image?.src ||
+      (article as any)?.image ||
+      (article as any)?.hero_image ||
+      (article as any)?.heroImage ||
+      ""
     )
 
     return {
@@ -208,10 +241,9 @@ export default function Demo() {
 
   // Determine allowed word counts based on plan. Memoize to keep Select stable
   const wordOptions = useMemo(() => {
-    if (!isAuthenticated) return ["1500"]
-    if (quota.plan === 'free') return ["1500", "2000"]
+    if (!isAuthenticated || quota.plan === 'free') return ["2000"]
     // Pro plan (quick + extended options)
-    return ["1500", "2000", "2500", "3000"]
+    return ["2000", "2500", "3000", "3500"]
   }, [isAuthenticated, quota.plan])
   const [topic, setTopic] = useState("")
   const [language, setLanguage] = useState("en")
@@ -220,6 +252,7 @@ export default function Demo() {
   const [wordCount, setWordCount] = useState(() => wordOptions[wordOptions.length - 1])
   // Optional brief/instructions to guide generation
   const [brief, setBrief] = useState("")
+  const [siteUrl, setSiteUrl] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
@@ -252,11 +285,13 @@ export default function Demo() {
     setResult(null)
     setLoading(true)
     try {
-      const desiredWords = parseInt(wordCount) || 3000
+      const desiredWords = Math.max(parseInt(wordCount) || 0, 2000)
       const seoBrief = `Write a deeply researched, long-form article of at least ${desiredWords} words with rich H2/H3 structure, skimmable bullet lists, examples, and step-by-step guidance. Include an introduction, concluding CTA, concise meta title/description, keyword list, and 4–6 FAQs. Aim for high readability with short paragraphs and bold subheadings. Add a clear hero image description tied to the topic and suggest 3–5 internal links when possible.`
       const combinedBrief = brief.trim()
         ? `${brief.trim()}\n\n${seoBrief}`
         : seoBrief
+
+      const normalizedSite = normalizeSiteUrl(siteUrl)
 
       console.log('Generating article with payload:', {
         topic: topic.trim(),
@@ -277,6 +312,7 @@ export default function Demo() {
         provider: "openrouter",
         model: "anthropic/claude-3.7-sonnet-20250219",
         search_provider: "serper",
+        site_url: normalizedSite || undefined,
         // Include optional brief/instructions if provided
         brief: combinedBrief
       })
@@ -291,7 +327,7 @@ export default function Demo() {
       // Backfill internal link suggestions when the generator response is missing them.
       let enrichedResult = safeResult
       const needsLinks =
-        (!Array.isArray(safeResult.internal_links) || safeResult.internal_links.length === 0) &&
+        (!Array.isArray(safeResult.internal_links) || safeResult.internal_links.length < 3) &&
         Boolean(safeResult.markdown || safeResult.html)
 
       if (needsLinks) {
@@ -299,6 +335,8 @@ export default function Demo() {
           const linkResponse = await suggestInternalLinks({
             topic: safeResult.title || topic.trim(),
             text: (safeResult.markdown || safeResult.html || "").slice(0, 20000),
+            domain: normalizedSite || undefined,
+            site_url: normalizedSite || undefined,
           })
 
           const incomingLinks =
@@ -306,8 +344,27 @@ export default function Demo() {
             (Array.isArray((linkResponse as any)?.suggestions) && (linkResponse as any).suggestions) ||
             []
 
-          if (incomingLinks.length > 0) {
-            enrichedResult = { ...safeResult, internal_links: incomingLinks }
+          const normalizedLinks = incomingLinks
+            .map((link: any, idx: number) => ({
+              url: coerceText(link?.url || link?.href || ""),
+              anchor_text: coerceText(link?.anchor_text || link?.anchorText || link?.title || link?.url || link?.href || `Suggested link ${idx + 1}`),
+            }))
+            .filter(link => link.url.length > 0)
+
+          // If we still have fewer than 3 links, synthesize fallback anchors using the site
+          // domain and article headings to keep the UX consistent.
+          if (normalizedLinks.length < 3) {
+            const headingSlugs = (safeResult.headings || []).slice(0, 3)
+            const base = normalizedSite || "https://example.com"
+            const filler = headingSlugs.map((heading: string, i: number) => ({
+              url: `${base}/${heading.toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || `section-${i + 1}`}`,
+              anchor_text: heading || `Related resource ${i + 1}`,
+            }))
+            normalizedLinks.push(...filler)
+          }
+
+          if (normalizedLinks.length > 0) {
+            enrichedResult = { ...safeResult, internal_links: normalizedLinks.slice(0, 5) }
           }
         } catch (linkError) {
           console.error("Failed to fetch internal links", linkError)
@@ -439,7 +496,7 @@ export default function Demo() {
             )}
 
             {/* Optional brief/instructions */}
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-3">
               <Textarea
                 placeholder="Optional brief or instructions (e.g. tone, brand guidelines, specific points)"
                 value={brief}
@@ -447,6 +504,16 @@ export default function Demo() {
                 disabled={loading}
                 className="mt-2"
               />
+              <Input
+                placeholder="Your site URL for internal link suggestions (e.g. https://example.com)"
+                value={siteUrl}
+                onChange={e => setSiteUrl(e.target.value)}
+                disabled={loading}
+                className="h-12"
+              />
+              <p className="text-xs text-muted-foreground">
+                We’ll suggest at least 3 relevant internal links from your domain when provided.
+              </p>
             </div>
           </div>
 
